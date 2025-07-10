@@ -1,0 +1,8 @@
+/**
+ * Minified by jsDelivr using clean-css v5.3.2.
+ * Original file: /npm/ckeditor4@4.25.0/plugins/tableselection/styles/tableselection.css
+ *
+ * Do NOT use SRI with dynamically generated files! More information: https://www.jsdelivr.com/using-sri-with-dynamic-files
+ */
+.cke_table-faked-selection-editor ::selection,table[data-cke-table-faked-selection-table] ::selection{background:0 0}.cke_table-faked-selection{background:#a9a9a9!important;color:#000}.cke_table-faked-selection a{color:#000}.cke_editable:focus .cke_table-faked-selection{background:#0076cb!important;color:#fff}.cke_editable:focus .cke_table-faked-selection a{color:#fff}.cke_table-faked-selection ::-moz-selection,.cke_table-faked-selection::-moz-selection{background:0 0}.cke_table-faked-selection ::selection,.cke_table-faked-selection::selection{background:0 0}table[data-cke-table-faked-selection-table]{cursor:cell}
+/*# sourceMappingURL=/sm/a1fce7620e81f6c4062b0d73247eefac44fa6c418925b379481082c9322a06bc.map */
