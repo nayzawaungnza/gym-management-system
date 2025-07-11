@@ -58,6 +58,16 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
         // Admin Dashboard
         Route::get('/dashboard', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
         
+        Route::get('/stats', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getStats'])->name('admin.stats');
+    Route::get('/revenue-chart', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getRevenueChart'])->name('admin.revenue-chart');
+    Route::get('/member-growth', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getMemberGrowth'])->name('admin.member-growth');
+    Route::get('/attendance-overview', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getAttendanceOverview'])->name('admin.attendance-overview');
+    Route::get('/membership-type-distribution', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getMembershipTypeDistribution'])->name('admin.membership-type-distribution');
+    // Add export routes as needed
+    Route::get('/exports/comprehensive', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportComprehensive'])->name('admin.exports.comprehensive');
+    Route::get('/exports/financial', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportFinancial'])->name('admin.exports.financial');
+    Route::get('/exports/analytics', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportAnalytics'])->name('admin.exports.analytics');
+
         // Members Management
         Route::resource('members', App\Http\Controllers\Backend\MemberController::class);
         Route::post('members/{member}/change-status', [App\Http\Controllers\Backend\MemberController::class, 'changeStatus'])->name('members.change-status');
@@ -155,6 +165,7 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
         // Member Profile
         Route::prefix('member')->name('member.')->group(function () {
             Route::get('profile', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'profile'])->name('profile');
+            Route::get('/member/profile/create', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'createProfile'])->name('member.profile.create');
             Route::post('profile/update', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'updateProfile'])->name('profile.update');
             
             // Schedule and Classes

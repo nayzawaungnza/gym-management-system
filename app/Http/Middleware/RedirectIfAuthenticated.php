@@ -23,43 +23,26 @@ class RedirectIfAuthenticated
      * @param  string[]  ...$guards
      * @return mixed
      */
-    public function handle(Request $request, Closure $next, ...$guards)
-    {
-        $guards = empty($guards) ? [null] : $guards;
+   public function handle(Request $request, Closure $next, ...$guards)
+{
+    $guards = empty($guards) ? [null] : $guards;
 
-        foreach ($guards as $guard) {
-            if (Auth::guard($guard)->check()) {
-                $user = Auth::guard($guard)->user();
-                $roles = $user->getRoleNames()->toJson();
-                \Log::info('RedirectIfAuthenticated: Authenticated user redirected', [
-                    'email' => $user->email,
-                    'roles' => $roles,
-                    'guard' => $guard ?: 'default',
-                    'path' => $request->path(),
-                ]);
-
-                // Check email verification
-                if (!$user->hasVerifiedEmail()) {
-                    \Log::info('RedirectIfAuthenticated: User email not verified', ['email' => $user->email]);
-                    return redirect()->route('verification.notice');
-                }
-
-                // Redirect based on role
-                if ($user->hasRole('Admin')) {
-                    return redirect()->intended('/admin/dashboard');
-                } elseif ($user->hasRole('Trainer')) {
-                    return redirect()->intended('/trainer/dashboard');
-                } else {
-                    return redirect()->intended('/dashboard');
-                }
+    foreach ($guards as $guard) {
+        if (Auth::guard($guard)->check()) {
+            $user = Auth::guard($guard)->user();
+            
+            if (!$user->hasVerifiedEmail()) {
+                return redirect()->route('verification.notice');
             }
+
+            // Clear intended URL to prevent loops
+            redirect()->setIntendedUrl(null);
+            
+            // Let the controller handle the final redirect
+            return $next($request);
         }
-
-        \Log::debug('RedirectIfAuthenticated: Unauthenticated user proceeding', [
-            'path' => $request->path(),
-            'ip' => $request->ip(),
-        ]);
-
-        return $next($request);
     }
+
+    return $next($request);
+}
 }

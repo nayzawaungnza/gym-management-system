@@ -2,23 +2,25 @@
 
 namespace App\Http\Controllers\Backend\Admin;
 
-use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use App\Models\Member;
+use App\Models\Payment;
 use App\Models\Trainer;
 use App\Models\GymClass;
-use App\Models\Payment;
-use App\Models\Attendance;
 use App\Models\Equipment;
-use App\Models\ActivityLog;
+use App\Models\Attendance;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
+use App\Models\MembershipType;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use App\Models\AttendanceVerification;
+use Spatie\Activitylog\Models\Activity;
 
 class AdminDashboardController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:admin']);
+        $this->middleware(['auth', 'role:Admin']);
     }
 
     public function index()
@@ -27,12 +29,14 @@ class AdminDashboardController extends Controller
         $recentActivities = $this->getRecentActivities();
         $upcomingClasses = $this->getUpcomingClasses();
         $equipmentStatus = $this->getEquipmentStatus();
-        
+        $flaggedAttendances = $this->getFlaggedAttendances()['data'] ?? [];
+
         return view('backend.admin.dashboard', compact(
-            'stats', 
-            'recentActivities', 
-            'upcomingClasses', 
-            'equipmentStatus'
+            'stats',
+            'recentActivities',
+            'upcomingClasses',
+            'equipmentStatus',
+            'flaggedAttendances'
         ));
     }
 
@@ -43,18 +47,21 @@ class AdminDashboardController extends Controller
             $memberGrowth = $this->getMemberGrowthData();
             $revenueData = $this->getRevenueData();
             $attendanceData = $this->getAttendanceData();
+            $membershipTypeData = $this->getMembershipTypeDistribution()['data'];
 
             return response()->json([
                 'success' => true,
                 'stats' => $stats,
                 'member_growth' => $memberGrowth,
                 'revenue_data' => $revenueData,
-                'attendance_data' => $attendanceData
+                'attendance_data' => $attendanceData,
+                'membership_type_data' => $membershipTypeData
             ]);
         } catch (\Exception $e) {
+            \Log::error('Failed to fetch dashboard stats: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error fetching stats: ' . $e->getMessage()
+                'message' => 'Unable to fetch dashboard statistics. Please try again later.'
             ], 500);
         }
     }
@@ -63,6 +70,13 @@ class AdminDashboardController extends Controller
     {
         try {
             $period = $request->get('period', 'month');
+            if (!in_array($period, ['week', 'month', 'year'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid period specified. Must be week, month, or year.'
+                ], 400);
+            }
+
             $data = $this->getRevenueChartData($period);
 
             return response()->json([
@@ -70,9 +84,10 @@ class AdminDashboardController extends Controller
                 'data' => $data
             ]);
         } catch (\Exception $e) {
+            \Log::error('Failed to fetch revenue chart: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error fetching revenue chart: ' . $e->getMessage()
+                'message' => 'Unable to fetch revenue chart. Please try again later.'
             ], 500);
         }
     }
@@ -81,6 +96,13 @@ class AdminDashboardController extends Controller
     {
         try {
             $period = $request->get('period', 'year');
+            if (!in_array($period, ['month', 'year'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid period specified. Must be month or year.'
+                ], 400);
+            }
+
             $data = $this->getMemberGrowthChartData($period);
 
             return response()->json([
@@ -88,9 +110,10 @@ class AdminDashboardController extends Controller
                 'data' => $data
             ]);
         } catch (\Exception $e) {
+            \Log::error('Failed to fetch member growth: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error fetching member growth: ' . $e->getMessage()
+                'message' => 'Unable to fetch member growth. Please try again later.'
             ], 500);
         }
     }
@@ -99,6 +122,13 @@ class AdminDashboardController extends Controller
     {
         try {
             $period = $request->get('period', 'week');
+            if (!in_array($period, ['week', 'month'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid period specified. Must be week or month.'
+                ], 400);
+            }
+
             $data = $this->getAttendanceOverviewData($period);
 
             return response()->json([
@@ -106,10 +136,75 @@ class AdminDashboardController extends Controller
                 'data' => $data
             ]);
         } catch (\Exception $e) {
+            \Log::error('Failed to fetch attendance overview: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error fetching attendance overview: ' . $e->getMessage()
+                'message' => 'Unable to fetch attendance overview. Please try again later.'
             ], 500);
+        }
+    }
+
+    public function getFlaggedAttendances()
+    {
+        try {
+            $flaggedAttendances = AttendanceVerification::flagged()
+                ->with(['member', 'attendance', 'flaggedBy'])
+                ->latest('flagged_at')
+                ->limit(5)
+                ->get()
+                ->map(function ($verification) {
+                    return [
+                        'id' => $verification->id,
+                        'member_name' => optional($verification->member)->full_name ?? 'Unknown',
+                        'check_in_time' => optional($verification->attendance)->check_in_time?->toDateTimeString(),
+                        'verification_method' => $verification->verification_method,
+                        'flag_reason' => $verification->flag_reason,
+                        'flagged_by' => optional($verification->flaggedBy)->name ?? 'System',
+                        'flagged_at' => $verification->flagged_at->diffForHumans(),
+                    ];
+                });
+
+            return [
+                'success' => true,
+                'data' => $flaggedAttendances
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Failed to fetch flagged attendances: ' . $e->getMessage(), ['exception' => $e]);
+            return [
+                'success' => false,
+                'message' => 'Unable to fetch flagged attendances. Please try again later.'
+            ];
+        }
+    }
+
+    public function getMembershipTypeDistribution()
+    {
+        try {
+            $data = MembershipType::active()
+                ->withCount(['members' => function ($query) {
+                    $query->active()->where('membership_end_date', '>', Carbon::now());
+                }])
+                ->get()
+                ->map(function ($type) {
+                    return [
+                        'name' => $type->type_name,
+                        'count' => $type->members_count,
+                    ];
+                });
+
+            return [
+                'success' => true,
+                'data' => [
+                    'labels' => $data->pluck('name')->toArray(),
+                    'data' => $data->pluck('count')->toArray(),
+                ]
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Failed to fetch membership type distribution: ' . $e->getMessage(), ['exception' => $e]);
+            return [
+                'success' => false,
+                'message' => 'Unable to fetch membership type distribution. Please try again later.'
+            ];
         }
     }
 
@@ -119,36 +214,57 @@ class AdminDashboardController extends Controller
         $thisMonth = Carbon::now()->startOfMonth();
         $lastMonth = Carbon::now()->subMonth()->startOfMonth();
 
+        $memberStats = Member::selectRaw('
+            COUNT(*) as total_members,
+            COUNT(CASE WHEN status = "active" AND membership_end_date > NOW() THEN 1 END) as active_members,
+            COUNT(CASE WHEN created_at >= ? THEN 1 END) as new_members_this_month,
+            COUNT(CASE WHEN created_at BETWEEN ? AND ? THEN 1 END) as new_members_last_month
+        ', [$thisMonth, $lastMonth, $thisMonth])
+            ->first();
+
+        $paymentStats = Payment::selectRaw('
+            SUM(CASE WHEN DATE(payment_date) = ? AND status = "Completed" THEN amount ELSE 0 END) as today_revenue,
+            SUM(CASE WHEN payment_date >= ? AND status = "Completed" THEN amount ELSE 0 END) as month_revenue
+        ', [$today, $thisMonth])
+            ->first();
+
+        $attendanceStats = Attendance::selectRaw('
+            COUNT(CASE WHEN DATE(check_in_time) = ? THEN 1 END) as today_checkins,
+            COUNT(CASE WHEN DATE(check_in_time) = ? AND check_out_time IS NULL THEN 1 END) as active_members_now
+        ', [$today, $today])
+            ->first();
+
+        $equipmentStats = Equipment::selectRaw('
+            COUNT(*) as total,
+            COUNT(CASE WHEN status = "available" THEN 1 END) as available,
+            COUNT(CASE WHEN status = "maintenance" THEN 1 END) as maintenance
+        ')->first();
+
         return [
-            'total_members' => Member::count(),
-            'active_members' => Member::where('status', 'active')->count(),
+            'total_members' => $memberStats->total_members,
+            'active_members' => $memberStats->active_members,
             'total_trainers' => Trainer::count(),
             'active_trainers' => Trainer::where('is_active', true)->count(),
             'total_classes' => GymClass::count(),
-            'today_classes' => GymClass::whereDate('start_date', $today)->count(),
-            'total_equipment' => Equipment::count(),
-            'maintenance_equipment' => Equipment::where('status', 'maintenance')->count(),
-            'today_revenue' => Payment::whereDate('payment_date', $today)
-                ->where('status', 'completed')
-                ->sum('amount'),
-            'month_revenue' => Payment::where('payment_date', '>=', $thisMonth)
-                ->where('status', 'completed')
-                ->sum('amount'),
-            'today_checkins' => Attendance::whereDate('check_in_time', $today)->count(),
-            'active_members_now' => Attendance::whereDate('check_in_time', $today)
-                ->whereNull('check_out_time')
-                ->count(),
-            'new_members_this_month' => Member::where('created_at', '>=', $thisMonth)->count(),
+            'today_classes' => GymClass::whereDate('schedule_day', $today)->count(),
+            'total_equipment' => $equipmentStats->total,
+            'equipment_available' => $equipmentStats->available,
+            'maintenance_equipment' => $equipmentStats->maintenance,
+            'today_revenue' => $paymentStats->today_revenue,
+            'month_revenue' => $paymentStats->month_revenue,
+            'today_checkins' => $attendanceStats->today_checkins,
+            'active_members_now' => $attendanceStats->active_members_now,
+            'new_members_this_month' => $memberStats->new_members_this_month,
             'member_growth_percentage' => $this->calculateGrowthPercentage(
-                Member::where('created_at', '>=', $thisMonth)->count(),
-                Member::whereBetween('created_at', [$lastMonth, $thisMonth])->count()
+                $memberStats->new_members_this_month,
+                $memberStats->new_members_last_month
             )
         ];
     }
 
     private function getRecentActivities()
     {
-        return ActivityLog::with(['causer'])
+        return Activity::with(['causer'])
             ->latest()
             ->limit(10)
             ->get()
@@ -167,127 +283,94 @@ class AdminDashboardController extends Controller
 
     private function getUpcomingClasses()
     {
-        return GymClass::with(['trainer'])
-            ->where('start_date', '>=', Carbon::now())
-            ->where('status', 'active')
-            ->orderBy('start_date')
+        return GymClass::with(['trainer', 'classRegistrations'])
+            ->where('schedule_day', '>=', Carbon::now())
+            ->where('is_active', true)
+            ->orderBy('schedule_day')
             ->orderBy('start_time')
             ->limit(5)
             ->get()
             ->map(function ($class) {
                 return [
                     'id' => $class->id,
-                    'name' => $class->name,
-                    'trainer_name' => $class->trainer ? $class->trainer->full_name : 'No Trainer',
-                    'start_date' => $class->start_date,
+                    'name' => $class->class_name,
+                    'trainer_name' => optional($class->trainer)->full_name ?? 'No Trainer',
+                    'start_date' => $class->schedule_day,
                     'start_time' => $class->start_time,
-                    'capacity' => $class->capacity,
-                    'registered' => $class->classRegistrations()->count(),
-                    'location' => $class->location
+                    'capacity' => $class->max_capacity,
+                    'registered' => $class->current_capacity,
+                    'location' => $class->room
                 ];
             });
     }
 
     private function getEquipmentStatus()
     {
+        $stats = Equipment::selectRaw('
+            COUNT(*) as total,
+            COUNT(CASE WHEN status = "available" THEN 1 END) as available,
+            COUNT(CASE WHEN status = "in_use" THEN 1 END) as in_use,
+            COUNT(CASE WHEN status = "maintenance" THEN 1 END) as maintenance,
+            COUNT(CASE WHEN status = "out_of_order" THEN 1 END) as out_of_order
+        ')->first();
+
         return [
-            'total' => Equipment::count(),
-            'available' => Equipment::where('status', 'available')->count(),
-            'in_use' => Equipment::where('status', 'in_use')->count(),
-            'maintenance' => Equipment::where('status', 'maintenance')->count(),
-            'out_of_order' => Equipment::where('status', 'out_of_order')->count()
+            'total' => $stats->total,
+            'available' => $stats->available,
+            'in_use' => $stats->in_use,
+            'maintenance' => $stats->maintenance,
+            'out_of_order' => $stats->out_of_order
         ];
     }
 
-    private function getMemberGrowthData()
-    {
-        $months = [];
-        $data = [];
-
-        for ($i = 11; $i >= 0; $i--) {
-            $date = Carbon::now()->subMonths($i);
-            $months[] = $date->format('M Y');
-            $data[] = Member::whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->count();
-        }
-
-        return [
-            'labels' => $months,
-            'data' => $data
-        ];
-    }
-
-    private function getRevenueData()
-    {
-        $days = [];
-        $data = [];
-
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $days[] = $date->format('M d');
-            $data[] = Payment::whereDate('payment_date', $date)
-                ->where('status', 'completed')
-                ->sum('amount');
-        }
-
-        return [
-            'labels' => $days,
-            'data' => $data
-        ];
-    }
-
-    private function getAttendanceData()
-    {
-        $days = [];
-        $data = [];
-
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $days[] = $date->format('M d');
-            $data[] = Attendance::whereDate('check_in_time', $date)->count();
-        }
-
-        return [
-            'labels' => $days,
-            'data' => $data
-        ];
-    }
-
-    private function getRevenueChartData($period)
+    private function getDateAggregatedData($model, $column, $period, $aggregate = 'count', $conditions = [])
     {
         $labels = [];
         $data = [];
 
         switch ($period) {
             case 'week':
-                for ($i = 6; $i >= 0; $i--) {
-                    $date = Carbon::now()->subDays($i);
-                    $labels[] = $date->format('D');
-                    $data[] = Payment::whereDate('payment_date', $date)
-                        ->where('status', 'completed')
-                        ->sum('amount');
-                }
+                $startDate = Carbon::now()->subDays(6)->startOfDay();
+                $endDate = Carbon::now()->endOfDay();
+                $format = 'D';
+                $groupBy = 'DATE(' . $column . ')';
+                $interval = '1 DAY';
                 break;
             case 'month':
-                for ($i = 29; $i >= 0; $i--) {
-                    $date = Carbon::now()->subDays($i);
-                    $labels[] = $date->format('M d');
-                    $data[] = Payment::whereDate('payment_date', $date)
-                        ->where('status', 'completed')
-                        ->sum('amount');
-                }
+                $startDate = Carbon::now()->subDays(29)->startOfDay();
+                $endDate = Carbon::now()->endOfDay();
+                $format = 'M d';
+                $groupBy = 'DATE(' . $column . ')';
+                $interval = '1 DAY';
                 break;
             case 'year':
-                for ($i = 11; $i >= 0; $i--) {
-                    $date = Carbon::now()->subMonths($i);
-                    $labels[] = $date->format('M Y');
-                    $data[] = Payment::whereYear('payment_date', $date->year)
-                        ->whereMonth('payment_date', $date->month)
-                        ->where('status', 'completed')
-                        ->sum('amount');
-                }
+                $startDate = Carbon::now()->subMonths(11)->startOfMonth();
+                $endDate = Carbon::now()->endOfMonth();
+                $format = 'M Y';
+                $groupBy = "DATE_FORMAT($column, '%Y-%m')";
+                $interval = '1 MONTH';
                 break;
+            default:
+                throw new \InvalidArgumentException('Invalid period specified');
+        }
+
+        $query = $model::whereBetween($column, [$startDate, $endDate]);
+        foreach ($conditions as $key => $value) {
+            $query->where($key, $value);
+        }
+
+        $aggregateColumn = $aggregate === 'sum' ? $column : '*';
+        $results = $query->selectRaw("$groupBy as date, $aggregate($aggregateColumn) as total")
+            ->groupByRaw($groupBy)
+            ->orderBy('date')
+            ->get();
+
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $labels[] = $currentDate->format($format);
+            $dateKey = $period === 'year' ? $currentDate->format('Y-m') : $currentDate->toDateString();
+            $data[] = $results->firstWhere('date', $dateKey)->total ?? 0;
+            $currentDate->add($interval);
         }
 
         return [
@@ -296,34 +379,29 @@ class AdminDashboardController extends Controller
         ];
     }
 
+    private function getRevenueChartData($period)
+    {
+        return $this->getDateAggregatedData(Payment::class, 'payment_date', $period, 'sum', ['status' => 'Completed']);
+    }
+
+    private function getRevenueData()
+    {
+        return $this->getDateAggregatedData(Payment::class, 'payment_date', 'week', 'sum', ['status' => 'Completed']);
+    }
+
     private function getMemberGrowthChartData($period)
     {
-        $labels = [];
-        $data = [];
+        return $this->getDateAggregatedData(Member::class, 'created_at', $period);
+    }
 
-        switch ($period) {
-            case 'month':
-                for ($i = 29; $i >= 0; $i--) {
-                    $date = Carbon::now()->subDays($i);
-                    $labels[] = $date->format('M d');
-                    $data[] = Member::whereDate('created_at', $date)->count();
-                }
-                break;
-            case 'year':
-                for ($i = 11; $i >= 0; $i--) {
-                    $date = Carbon::now()->subMonths($i);
-                    $labels[] = $date->format('M Y');
-                    $data[] = Member::whereYear('created_at', $date->year)
-                        ->whereMonth('created_at', $date->month)
-                        ->count();
-                }
-                break;
-        }
+    private function getMemberGrowthData()
+    {
+        return $this->getDateAggregatedData(Member::class, 'created_at', 'year');
+    }
 
-        return [
-            'labels' => $labels,
-            'data' => $data
-        ];
+    private function getAttendanceData()
+    {
+        return $this->getDateAggregatedData(Attendance::class, 'check_in_time', 'week');
     }
 
     private function getAttendanceOverviewData($period)
@@ -334,21 +412,42 @@ class AdminDashboardController extends Controller
 
         switch ($period) {
             case 'week':
-                for ($i = 6; $i >= 0; $i--) {
-                    $date = Carbon::now()->subDays($i);
-                    $labels[] = $date->format('D');
-                    $checkins[] = Attendance::whereDate('check_in_time', $date)->count();
-                    $checkouts[] = Attendance::whereDate('check_out_time', $date)->count();
-                }
+                $startDate = Carbon::now()->subDays(6)->startOfDay();
+                $endDate = Carbon::now()->endOfDay();
+                $format = 'D';
+                $groupBy = 'DATE(check_in_time)';
+                $interval = '1 DAY';
                 break;
             case 'month':
-                for ($i = 29; $i >= 0; $i--) {
-                    $date = Carbon::now()->subDays($i);
-                    $labels[] = $date->format('M d');
-                    $checkins[] = Attendance::whereDate('check_in_time', $date)->count();
-                    $checkouts[] = Attendance::whereDate('check_out_time', $date)->count();
-                }
+                $startDate = Carbon::now()->subDays(29)->startOfDay();
+                $endDate = Carbon::now()->endOfDay();
+                $format = 'M d';
+                $groupBy = 'DATE(check_in_time)';
+                $interval = '1 DAY';
                 break;
+            default:
+                throw new \InvalidArgumentException('Invalid period specified');
+        }
+
+        $checkinResults = Attendance::whereBetween('check_in_time', [$startDate, $endDate])
+            ->selectRaw("$groupBy as date, COUNT(*) as total")
+            ->groupByRaw($groupBy)
+            ->orderBy('date')
+            ->get();
+
+        $checkoutResults = Attendance::whereBetween('check_out_time', [$startDate, $endDate])
+            ->selectRaw("DATE(check_out_time) as date, COUNT(*) as total")
+            ->groupByRaw('DATE(check_out_time)')
+            ->orderBy('date')
+            ->get();
+
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $labels[] = $currentDate->format($format);
+            $dateKey = $currentDate->toDateString();
+            $checkins[] = $checkinResults->firstWhere('date', $dateKey)->total ?? 0;
+            $checkouts[] = $checkoutResults->firstWhere('date', $dateKey)->total ?? 0;
+            $currentDate->add($interval);
         }
 
         return [
@@ -363,7 +462,7 @@ class AdminDashboardController extends Controller
         if ($previous == 0) {
             return $current > 0 ? 100 : 0;
         }
-        
+
         return round((($current - $previous) / $previous) * 100, 1);
     }
 }

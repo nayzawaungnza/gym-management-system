@@ -5,7 +5,10 @@ namespace App\Services;
 use App\Models\Member;
 use App\Repositories\Backend\MemberRepository;
 use App\Services\Interfaces\MemberServiceInterface;
-use Illuminate\Http\Request;
+use Exception;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 class MemberService implements MemberServiceInterface
 {
@@ -16,33 +19,103 @@ class MemberService implements MemberServiceInterface
         $this->memberRepository = $memberRepository;
     }
 
-    public function getMembers(Request $request)
+    public function getMember(Member $member)
     {
-        return $this->memberRepository->getMembersEloquent();
+        return $this->memberRepository->getMember($member);
     }
 
-    public function getMember($id)
+    public function getMembersEloquent()
     {
-        return $this->memberRepository->getById($id);
+        return $this->memberRepository->getMembersEloquent()
+            ->with(['membershipType'])
+            ->orderBy('first_name', 'asc');
     }
 
+    /**
+     * Creates a new member with a database transaction and error handling.
+     *
+     * @param array $data
+     * @return Member
+     * @throws InvalidArgumentException
+     */
     public function createMember(array $data)
     {
-        return $this->memberRepository->create($data);
+        DB::beginTransaction();
+        try {
+            $data['join_date'] = now();
+            $data['member_id'] = $this->generateMemberId();
+            $member = $this->memberRepository->create($data);
+        } catch (Exception $exc) {
+            DB::rollBack();
+            Log::error('Member Creation Error: ' . $exc->getMessage());
+            throw new InvalidArgumentException('Unable to create Member');
+        }
+        DB::commit();
+
+        return $member;
     }
 
+    /**
+     * Updates a member with a database transaction and error handling.
+     *
+     * @param Member $member
+     * @param array $data
+     * @return bool
+     * @throws InvalidArgumentException
+     */
     public function updateMember(Member $member, array $data)
     {
-        return $this->memberRepository->update($member, $data);
+        DB::beginTransaction();
+        try {
+            $result = $this->memberRepository->update($member, $data);
+        } catch (Exception $exc) {
+            DB::rollBack();
+            Log::error('Member Update Error: ' . $exc->getMessage());
+            throw new InvalidArgumentException('Unable to update Member');
+        }
+        DB::commit();
+
+        return $result;
     }
 
+    /**
+     * Deletes a member with a database transaction and error handling.
+     *
+     * @param Member $member
+     * @return bool
+     * @throws InvalidArgumentException
+     */
     public function deleteMember(Member $member)
     {
-        return $this->memberRepository->destroy($member);
+        DB::beginTransaction();
+        try {
+            $result = $this->memberRepository->destroy($member);
+        } catch (Exception $exc) {
+            DB::rollBack();
+            Log::error('Member Deletion Error: ' . $exc->getMessage());
+            throw new InvalidArgumentException('Unable to delete Member');
+        }
+        DB::commit();
+
+        return $result;
     }
 
-    public function changeMemberStatus(Member $member, string $status)
+    public function registerMemberToClass($memberId, $classId)
     {
-        return $this->memberRepository->changeStatus($member, $status);
+         DB::beginTransaction();
+        try {
+            $result = $this->memberRepository->registerToClass($memberId, $classId);
+        } catch (Exception $exc) {
+            DB::rollBack();
+            Log::error('Member registration Error: ' . $exc->getMessage());
+            throw new InvalidArgumentException('Unable to register Member');
+        }
+        DB::commit();
+        return $result;
+    }
+
+    protected function generateMemberId()
+    {
+        return 'MEM' . date('Ymd') . strtoupper(substr(uniqid(), -5));
     }
 }

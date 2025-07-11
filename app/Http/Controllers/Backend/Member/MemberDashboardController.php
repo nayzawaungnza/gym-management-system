@@ -29,105 +29,188 @@ class MemberDashboardController extends Controller
     }
 
     public function index()
-    {
-        $member = Auth::user()->member;
-        $today = Carbon::today();
-        $thisMonth = Carbon::now()->startOfMonth();
+{
+    $user = Auth::user();
+    //dd($user->toArray(), $user->member);
+    if (!$user->member) {
+        return redirect()->route('member.profile')->with('error', 'Please create your member profile.');
+    }
+    $member = $user->member;
+    $today = Carbon::today();
+    $thisMonth = Carbon::now()->startOfMonth();
 
-        // Basic Statistics
-        $stats = [
-            'total_visits' => Attendance::where('member_id', $member->id)->count(),
-            'this_month_visits' => Attendance::where('member_id', $member->id)
-                ->where('check_in_time', '>=', $thisMonth)
-                ->count(),
-            'registered_classes' => ClassRegistration::where('member_id', $member->id)
-                ->where('status', 'registered')
-                ->count(),
-            'completed_classes' => ClassRegistration::where('member_id', $member->id)
-                ->where('status', 'attended')
-                ->count(),
-        ];
+    $stats = [
+        'total_visits' => Attendance::where('member_id', $member->id)->count(),
+        'this_month_visits' => Attendance::where('member_id', $member->id)
+            ->where('check_in_time', '>=', $thisMonth)
+            ->count(),
+        'registered_classes' => ClassRegistration::where('member_id', $member->id) // Fixed typo
+            ->where('status', 'registered')
+            ->count(),
+        'completed_classes' => ClassRegistration::where('member_id', $member->id)
+            ->where('status', 'attended')
+            ->count(),
+    ];
 
-        // Membership Status
-        $membershipStatus = [
-            'type' => $member->membershipType->name ?? 'N/A',
-            'start_date' => $member->membership_start_date,
-            'end_date' => $member->membership_end_date,
-            'days_remaining' => $member->membership_end_date ? 
-                Carbon::now()->diffInDays($member->membership_end_date, false) : null,
-            'is_expired' => $member->membership_end_date ? 
-                Carbon::now()->gt($member->membership_end_date) : false
-        ];
+    // Membership Status
+    $membershipStatus = [
+        'type' => $member->membershipType->name ?? 'N/A',
+        'start_date' => $member->membership_start_date,
+        'end_date' => $member->membership_end_date,
+        'days_remaining' => $member->membership_end_date 
+            ? Carbon::now()->diffInDays($member->membership_end_date, false) 
+            : null,
+        'is_expired' => $member->membership_end_date 
+            ? Carbon::now()->gt($member->membership_end_date) 
+            : false
+    ];
 
-        // Today's Classes
-        $todayClasses = GymClass::whereHas('classRegistrations', function($query) use ($member) {
-            $query->where('member_id', $member->id)
-                ->where('status', 'registered');
-        })
-        ->whereDate('start_time', $today)
-        ->with('trainer')
-        ->orderBy('start_time')
+    // Today's Classes
+    $todayClasses = GymClass::whereHas('classRegistrations', function($query) use ($member) {
+        $query->where('member_id', $member->id)
+            ->where('status', 'registered');
+    })
+    ->whereDate('start_time', $today)
+    ->with('trainer')
+    ->orderBy('start_time')
+    ->get();
+
+    // Upcoming Classes
+    $upcomingClasses = GymClass::whereHas('classRegistrations', function($query) use ($member) {
+        $query->where('member_id', $member->id)
+            ->where('status', 'registered');
+    })
+    ->where('start_time', '>', now())
+    ->where('start_time', '<=', now()->addDays(7))
+    ->with('trainer')
+    ->orderBy('start_time')
+    ->take(5)
+    ->get();
+
+    // Recent Attendance
+    $recentAttendance = Attendance::where('member_id', $member->id)
+        ->latest()
+        ->take(10)
         ->get();
 
-        // Upcoming Classes
-        $upcomingClasses = GymClass::whereHas('classRegistrations', function($query) use ($member) {
-            $query->where('member_id', $member->id)
-                ->where('status', 'registered');
-        })
-        ->where('start_time', '>', now())
-        ->where('start_time', '<=', now()->addDays(7))
-        ->with('trainer')
-        ->orderBy('start_time')
+    // Monthly Attendance Chart
+    $monthlyAttendance = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $month = Carbon::now()->subMonths($i);
+        $monthlyAttendance[] = [
+            'month' => $month->format('M Y'),
+            'visits' => Attendance::where('member_id', $member->id)
+                ->whereYear('check_in_time', $month->year)
+                ->whereMonth('check_in_time', $month->month)
+                ->count()
+        ];
+    }
+
+    // Recent Payments
+    $recentPayments = Payment::where('member_id', $member->id)
+        ->latest()
         ->take(5)
         ->get();
 
-        // Recent Attendance
-        $recentAttendance = Attendance::where('member_id', $member->id)
-            ->latest()
-            ->take(10)
-            ->get();
+    // Check if currently checked in
+    $currentlyCheckedIn = Attendance::where('member_id', $member->id)
+        ->whereNull('check_out_time')
+        ->latest()
+        ->first();
 
-        // Monthly Attendance Chart
-        $monthlyAttendance = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $month = Carbon::now()->subMonths($i);
-            $monthlyAttendance[] = [
-                'month' => $month->format('M Y'),
-                'visits' => Attendance::where('member_id', $member->id)
-                    ->whereYear('check_in_time', $month->year)
-                    ->whereMonth('check_in_time', $month->month)
-                    ->count()
-            ];
+    return view('backend.member.dashboard', compact(
+        'member',
+        'stats',
+        'membershipStatus',
+        'todayClasses',
+        'upcomingClasses',
+        'recentAttendance',
+        'monthlyAttendance',
+        'recentPayments',
+        'currentlyCheckedIn'
+    ));
+}
+public function createProfile(Request $request)
+{
+    $user = Auth::user();
+    $nameParts = explode(' ', $user->name, 2);
+    $firstName = $nameParts[0] ?? '';
+    $lastName = $nameParts[1] ?? '';
+
+    $data = [
+        'user_id' => $user->id,
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'email' => $user->email,
+        'phone' => $user->phone,
+        'address' => $user->address,
+        'emergency_contact_name' => $user->emergency_contact,
+        'emergency_contact_phone' => $user->emergency_phone,
+        'date_of_birth' => $user->date_of_birth,
+        'gender' => $user->gender,
+        'medical_conditions' => null,
+        'fitness_goals' => null,
+        'preferred_workout_time' => null,
+        'referral_source' => null,
+        'join_date' => null,
+        'membership_start_date' => null,
+        'status' => 'active',
+        'membership_type_id' => null,
+    ];
+    $member = Auth::user()->member ? Auth::user()->member : $data;
+return view('backend.member.create-profile', compact('member'));
+}
+
+public function storeProfile(Request $request)
+    {
+        $user = Auth::user();
+        
+        $request->validate([
+            'first_name' => 'required|string|max:50',
+            'last_name' => 'required|string|max:50',
+            'phone' => 'nullable|string|max:15',
+            'address' => 'nullable|string|max:500',
+            'emergency_contact_name' => 'nullable|string|max:100',
+            'emergency_contact_phone' => 'nullable|string|max:15',
+            'date_of_birth' => 'nullable|date',
+            'gender' => 'nullable|in:male,female,other',
+            'medical_conditions' => 'nullable|string|max:1000',
+            'fitness_goals' => 'nullable|string|max:1000',
+            'preferred_workout_time' => 'nullable|string|max:100',
+            'referral_source' => 'nullable|string|max:100',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+        ]);
+        $data = $request->only([
+            'first_name', 'last_name', 'phone', 'address',
+            'emergency_contact_name', 'emergency_contact_phone', 'date
+_of_birth',
+            'gender', 'medical_conditions', 'fitness_goals',
+            'preferred_workout_time', 'referral_source'
+        ]);
+        if ($request->hasFile('profile_photo')) {
+            $path = $request->file('profile_photo')->store('member_photos', 'public');
+            $data['profile_photo'] = $path;
         }
-
-        // Recent Payments
-        $recentPayments = Payment::where('member_id', $member->id)
-            ->latest()
-            ->take(5)
-            ->get();
-
-        // Check if currently checked in
-        $currentlyCheckedIn = Attendance::where('member_id', $member->id)
-            ->whereNull('check_out_time')
-            ->latest()
-            ->first();
-
-        return view('backend.member.dashboard', compact(
-            'member',
-            'stats',
-            'membershipStatus',
-            'todayClasses',
-            'upcomingClasses',
-            'recentAttendance',
-            'monthlyAttendance',
-            'recentPayments',
-            'currentlyCheckedIn'
-        ));
+        $data['user_id'] = $user->id;
+        $data['status'] = 'active'; // Default status
+        $data['join_date'] = now(); // Set join date to now
+        $data['membership_start_date'] = now(); // Set membership start date to now
+        $data['membership_type_id'] = null; // No membership type initially
+        $data['is_active'] = true; // Set active status
+        $member = Member::create($data);
+        $user->member()->associate($member);
+        $user->save();
+        return redirect()->route('member.profile')
+            ->with('success', 'Member profile created successfully');
     }
 
-    public function profile()
+
+    public function profile(Member $member)
     {
         $member = Auth::user()->member;
+        if (!$member) {
+            return redirect()->route('member.profile.create')->with('error', 'Please create your member profile.');
+        }        
         return view('backend.member.profile', compact('member'));
     }
 

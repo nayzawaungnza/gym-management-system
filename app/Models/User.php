@@ -90,9 +90,9 @@ class User extends Authenticatable implements MustVerifyEmail
      * Get the member profile associated with the user.
      */
     public function member()
-    {
-        return $this->hasOne(Member::class);
-    }
+{
+    return $this->hasOne(Member::class);
+}
 
     /**
      * Get the trainer profile associated with the user.

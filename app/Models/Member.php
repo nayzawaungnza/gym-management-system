@@ -36,7 +36,7 @@ class Member extends Model
         'fitness_goals',
         'preferred_workout_time',
         'referral_source',
-        'is_active'
+        //'is_active'
     ];
 
     protected $casts = [
@@ -62,11 +62,10 @@ class Member extends Model
     /**
      * Get the user that owns the member profile.
      */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
+   public function user(): BelongsTo
+{
+    return $this->belongsTo(User::class);
+}
     /**
      * Get the membership type for the member.
      */

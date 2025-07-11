@@ -450,7 +450,7 @@
                       <div class="dropdown-divider"></div>
                     </li>
                     <li>
-                    <form id="logout-form" action="" method="POST" class="d-none">
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                                 @csrf
                         </form>
                       <a class="dropdown-item" href="#" onclick="event.preventDefault(); console.log('Logout clicked'); document.getElementById('logout-form').submit();">

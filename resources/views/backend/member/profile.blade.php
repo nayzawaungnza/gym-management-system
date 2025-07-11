@@ -17,7 +17,7 @@
                             <div class="mb-3 col-md-6">
                                 <label for="first_name" class="form-label">First Name</label>
                                 <input type="text" class="form-control @error('first_name') is-invalid @enderror" 
-                                       id="first_name" name="first_name" value="{{ old('first_name', $member->first_name) }}" required>
+                                       id="first_name" name="first_name" value="{{ old('first_name', $member?->first_name) }}" required>
                                 @error('first_name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -25,20 +25,20 @@
                             <div class="mb-3 col-md-6">
                                 <label for="last_name" class="form-label">Last Name</label>
                                 <input type="text" class="form-control @error('last_name') is-invalid @enderror" 
-                                       id="last_name" name="last_name" value="{{ old('last_name', $member->last_name) }}" required>
+                                       id="last_name" name="last_name" value="{{ old('last_name', $member?->last_name) }}" required>
                                 @error('last_name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3 col-md-6">
                                 <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" value="{{ $member->email }}" disabled>
+                                <input type="email" class="form-control" id="email" value="{{ $member?->email }}" disabled>
                                 <small class="form-text text-muted">Email cannot be changed</small>
                             </div>
                             <div class="mb-3 col-md-6">
                                 <label for="phone" class="form-label">Phone</label>
                                 <input type="text" class="form-control @error('phone') is-invalid @enderror" 
-                                       id="phone" name="phone" value="{{ old('phone', $member->phone) }}">
+                                       id="phone" name="phone" value="{{ old('phone', $member?->phone) }}">
                                 @error('phone')
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -59,24 +59,24 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Membership Type</label>
-                        <p class="form-control-plaintext">{{ $member->membershipType?->type_name ?? 'N/A' }}</p>
+                        <p class="form-control-plaintext">{{ $member?->membershipType?->type_name ?? 'N/A' }}</p>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Join Date</label>
-                        <p class="form-control-plaintext">{{ $member->join_date->format('M d, Y') }}</p>
+                        <p class="form-control-plaintext">{{ $member?->join_date?->format('M d, Y') }}</p>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Status</label>
                         <p class="form-control-plaintext">
-                            <span class="badge bg-{{ $member->status === 'Active' ? 'success' : ($member->status === 'Suspended' ? 'danger' : 'secondary') }}">
-                                {{ $member->status }}
+                            <span class="badge bg-{{ $member?->status === 'Active' ? 'success' : ($member?->status === 'Suspended' ? 'danger' : 'secondary') }}">
+                                {{ $member?->status }}
                             </span>
                         </p>
                     </div>
-                    @if($member->membershipType)
+                    @if($member?->membershipType)
                     <div class="mb-3">
                         <label class="form-label">Monthly Fee</label>
-                        <p class="form-control-plaintext">${{ number_format($member->membershipType->price, 2) }}</p>
+                        <p class="form-control-plaintext">${{ number_format($member?->membershipType->price, 2) }}</p>
                     </div>
                     @endif
                 </div>

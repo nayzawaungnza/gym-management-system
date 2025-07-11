@@ -8,7 +8,7 @@
                     <script>
                       document.write(new Date().getFullYear());
                     </script>
-                    , made with ❤️ by <a href="https://venomhubsoftwaredevelopment.com" target="_blank" class="fw-medium">Venom Hub Software Development</a>
+                    , made with ❤️ by <a href="https://nay-react.vercel.app/" target="_blank" class="fw-medium">Team Name</a>
                   </div>
                   <div class="d-none d-lg-inline-block">
                     <a href="#" class="footer-link me-4" target="_blank"

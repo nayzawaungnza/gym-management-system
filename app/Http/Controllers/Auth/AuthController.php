@@ -2,95 +2,185 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Member;
 use App\Models\Trainer;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Auth\Events\Verified;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Foundation\Auth\ThrottlesLogins;
 
 class AuthController extends Controller
 {
+    use ThrottlesLogins;
+
+    // Maximum login attempts before throttling
+    protected $maxAttempts = 5;
+    // Minutes to lock out after max attempts
+    protected $decayMinutes = 15;
+
     public function showLoginForm()
     {
-        \Log::debug('Showing login form', ['path' => request()->path()]);
+        Log::debug('Showing login form', [
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
         return view('auth.login');
     }
 
     public function login(Request $request)
     {
-        \Log::info('Login form submitted with: ', $request->all());
+        $this->validateLogin($request);
 
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|min:6',
-        ]);
-
-        $credentials = $request->only('email', 'password');
-        $remember = $request->has('remember');
-
-        if (Auth::attempt($credentials, $remember)) {
-            \Log::info('Auth attempt successful for: ' . $request->email);
-            $request->session()->regenerate();
-            \Log::info('Session regenerated for user: ' . auth()->user()->email);
-            $request->session()->put('test_key', 'test_value');
-            \Log::info('Session test key: ' . $request->session()->get('test_key'));
-
-            $user = auth()->user();
-            $activity_data = [
-                'subject' => $user,
-                'event' => 'login',
-                'description' => sprintf('User (%s) logged in successfully.', $user->email),
-            ];
-            try {
-                saveActivityLog($activity_data);
-            } catch (\Exception $e) {
-                \Log::error('Failed to save activity log: ' . $e->getMessage());
-            }
-
-            \Log::info('User roles: ' . $user->getRoleNames()->toJson());
-            \Log::debug('Checking user active status', ['email' => $user->email, 'is_active' => $user->is_active ?? 'not set']);
-            if (!($user->is_active ?? true)) {
-                Auth::logout();
-                $request->session()->invalidate();
-                \Log::warning('Login failed: User is inactive', ['email' => $user->email]);
-                return redirect()->route('login')->with('error', 'Your account is inactive. Please contact support.');
-            }
-
-            if (!$user->hasVerifiedEmail()) {
-                \Log::info('User email not verified, redirecting to verification notice', ['email' => $user->email]);
-                return redirect()->route('verification.notice');
-            }
-
-            if ($this->requiresTwoFactorAuth($user)) {
-                \Log::info('User requires 2FA, redirecting to 2FA challenge', ['email' => $user->email]);
-                return redirect()->route('2fa.show');
-            }
-
-            return $this->redirectBasedOnRole();
+        // Check for too many login attempts
+        if ($this->hasTooManyLoginAttempts($request)) {
+            $this->fireLockoutEvent($request);
+            return $this->sendLockoutResponse($request);
         }
 
-        \Log::info('Failed login attempt', [
-            'email' => $request->email,
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
+        if ($this->attemptLogin($request)) {
+            return $this->handleSuccessfulLogin($request);
+        }
 
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->withInput($request->except('password'));
+        $this->incrementLoginAttempts($request);
+        return $this->sendFailedLoginResponse($request);
+    }
+
+    protected function validateLogin(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email:rfc,dns',
+            'password' => 'required|string|min:8',
+        ], [
+            'email.required' => 'Please enter your email address',
+            'email.email' => 'Please enter a valid email address',
+            'password.required' => 'Please enter your password',
+            'password.min' => 'Password must be at least 8 characters',
+        ]);
+    }
+
+    protected function attemptLogin(Request $request)
+    {
+        return Auth::attempt(
+            $request->only('email', 'password'),
+            $request->filled('remember')
+        );
+    }
+
+    protected function handleSuccessfulLogin(Request $request)
+    {
+        $request->session()->regenerate();
+        $this->clearLoginAttempts($request);
+
+        $user = Auth::user();
+        $this->logSuccessfulLogin($user);
+
+        if (!$this->isAccountActive($user)) {
+            return $this->handleInactiveAccount($request, $user);
+        }
+
+        if (!$user->hasVerifiedEmail()) {
+            return $this->handleUnverifiedEmail($user);
+        }
+
+        if ($this->requiresTwoFactorAuth($user)) {
+            return $this->handleTwoFactorAuth($user);
+        }
+
+        return $this->redirectBasedOnRole($user);
+    }
+
+    protected function sendFailedLoginResponse(Request $request)
+    {
+        throw ValidationException::withMessages([
+            'email' => [trans('auth.failed')],
+        ]);
+    }
+
+    protected function logSuccessfulLogin($user)
+    {
+        try {
+            saveActivityLog([
+                'subject' => $user,
+                'event' => 'login',
+                'description' => sprintf('User %s logged in successfully', $user->email),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Activity log error: '.$e->getMessage());
+        }
+    }
+
+    protected function isAccountActive($user)
+    {
+        return $user->is_active ?? false;
+    }
+
+    protected function handleInactiveAccount(Request $request, $user)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        Log::warning('Inactive account login attempt', [
+            'user_id' => $user->id,
+            'email' => $user->email
+        ]);
+        
+        return redirect()->route('login')
+            ->with('error', 'Your account is inactive. Please contact support.');
+    }
+
+    protected function handleUnverifiedEmail($user)
+    {
+        Log::notice('Unverified email access attempt', ['user_id' => $user->id]);
+        return redirect()->route('verification.notice');
     }
 
     protected function requiresTwoFactorAuth($user)
     {
         return $user->two_factor_secret !== null;
+    }
+
+    protected function handleTwoFactorAuth($user)
+    {
+        Log::info('2FA required for user', ['user_id' => $user->id]);
+        return redirect()->route('2fa.show');
+    }
+
+    protected function redirectBasedOnRole($user)
+    {
+        $redirectPath = $this->determineRedirectPath($user);
+        
+        Log::info('Successful login redirect', [
+            'user_id' => $user->id,
+            'roles' => $user->getRoleNames(),
+            'redirect_path' => $redirectPath
+        ]);
+        
+        return redirect()->intended($redirectPath);
+    }
+
+    protected function determineRedirectPath($user)
+    {
+        if ($user->hasRole('Admin') || $user->is_admin) {
+            return '/admin/dashboard';
+        }
+        
+        if ($user->hasRole('Trainer')) {
+            return '/trainer/dashboard';
+        }
+        
+        return '/dashboard';
     }
 
     public function showRegistrationForm()
@@ -115,7 +205,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'email_verified_at' => null,
             'is_admin' => $request->role === 'Member' ? 0 : 2,
-            'is_active' => true, // Ensure new users are active
+            'is_active' => true,
         ]);
 
         $user->assignRole($request->role);
@@ -136,7 +226,7 @@ class AuthController extends Controller
         try {
             saveActivityLog($activity_data);
         } catch (\Exception $e) {
-            \Log::error('Failed to save activity log: ' . $e->getMessage());
+            Log::error('Failed to save activity log: ' . $e->getMessage());
         }
 
         return redirect()->route('verification.notice')
@@ -154,7 +244,7 @@ class AuthController extends Controller
         try {
             saveActivityLog($activity_data);
         } catch (\Exception $e) {
-            \Log::error('Failed to save activity log: ' . $e->getMessage());
+            Log::error('Failed to save activity log: ' . $e->getMessage());
         }
 
         Auth::logout();
@@ -216,7 +306,7 @@ class AuthController extends Controller
 
     public function verificationNotice()
     {
-        \Log::info('Verification notice shown for user: ' . (auth()->check() ? auth()->user()->email : 'unauthenticated'));
+        Log::info('Verification notice shown for user: ' . (auth()->check() ? auth()->user()->email : 'unauthenticated'));
         return view('auth.verify-email');
     }
 
@@ -224,13 +314,13 @@ class AuthController extends Controller
     {
         $user = $request->user();
         if ($user->hasVerifiedEmail()) {
-            \Log::info('Email already verified, redirecting to dashboard', ['email' => $user->email]);
+            Log::info('Email already verified, redirecting to dashboard', ['email' => $user->email]);
             return redirect()->intended('/dashboard');
         }
 
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
-            \Log::info('Email verified successfully', ['email' => $user->email]);
+            Log::info('Email verified successfully', ['email' => $user->email]);
         }
 
         return redirect()->intended('/dashboard')->with('verified', true);
@@ -240,25 +330,14 @@ class AuthController extends Controller
     {
         $user = $request->user();
         if ($user->hasVerifiedEmail()) {
-            \Log::info('Email already verified, redirecting to dashboard', ['email' => $user->email]);
+            Log::info('Email already verified, redirecting to dashboard', ['email' => $user->email]);
             return redirect()->intended('/dashboard');
         }
 
         $user->sendEmailVerificationNotification();
-        \Log::info('Verification email resent', ['email' => $user->email]);
+        Log::info('Verification email resent', ['email' => $user->email]);
 
         return back()->with('status', 'verification-link-sent');
-    }
-
-    private function redirectBasedOnRole()
-    {
-        $user = auth()->user();
-        \Log::info('Redirecting user to dashboard', [
-            'email' => $user->email,
-            'roles' => $user->getRoleNames()->toJson(),
-            'session_id' => request()->session()->getId(),
-        ]);
-        return redirect()->intended('/dashboard');
     }
 
     private function createMemberProfile(User $user, Request $request)
@@ -286,5 +365,16 @@ class AuthController extends Controller
             'hire_date' => now(),
             'is_active' => false,
         ]);
+    }
+
+    /**
+     * Get the throttle key for the given request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return string
+     */
+    protected function throttleKey(Request $request)
+    {
+        return Str::lower($request->input('email')).'|'.$request->ip();
     }
 }

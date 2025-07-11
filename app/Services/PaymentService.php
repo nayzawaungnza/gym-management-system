@@ -41,12 +41,12 @@ class PaymentService implements PaymentServiceInterface
         return $this->paymentRepository->markCompleted($payment);
     }
 
-    public function getMemberPayments($memberId)
+    public function getMemberPayments(Payment $payment,$memberId)
     {
         return $this->paymentRepository->getMemberPayments($memberId);
     }
 
-    public function getMonthlyRevenue(Payment$year = null, $month = null)
+    public function getMonthlyRevenue(Payment $payment, $year = null, $month = null)
     {
         return $this->paymentRepository->getMonthlyRevenue($year, $month);
     }

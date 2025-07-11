@@ -16,7 +16,7 @@ class PaymentRepository extends BaseRepository
             ->orderBy('created_at', 'desc');
     }
 
-    public function getById($id)
+    public function getById($id, $with = [])
     {
         return $this->model->findOrFail($id);
     }

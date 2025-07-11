@@ -3,19 +3,6 @@
 @section('vendor-style')
 <link rel="stylesheet" href="{{ url('/assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css') }}" />
 <link rel="stylesheet" href="{{ url('/assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css') }}" />
-<link rel="stylesheet" href="{{ url('/assets/vendor/libs/datatables-buttons-bs5/buttons.bootstrap5.css') }}" />
-<style>
-/* Hide DataTables responsive toggle icon */
-table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before,
-table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control::before {
-    display: none !important;
-}
-/* Ensure no control column is added */
-table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
-table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control {
-    display: none !important;
-}
-</style>
 @endsection
 
 @section('vendor-script')
@@ -36,37 +23,12 @@ $(document).ready(function() {
             {data: 'email', name: 'email'},
             {data: 'phone', name: 'phone'},
             {data: 'membership_type', name: 'membershipType.type_name'},
-            {data: 'created_at', name: 'created_at'},
-            {data: 'status_badge', name: 'status', orderable: false},
+            {data: 'membership_status', name: 'status'},
             {data: 'action', name: 'action', orderable: false, searchable: false}
         ],
-        responsive: {
-            details: {
-                type: 'none', // Disable default inline responsive behavior
-                display: $.fn.dataTable.Responsive.display.modal({
-                    header: function(row) {
-                        var data = row.data();
-                        return 'Details for ' + data.full_name;
-                    }
-                }),
-                renderer: $.fn.dataTable.Responsive.renderer.tableAll({
-                    tableClass: 'table'
-                })
-            }
-        },
-        columnDefs: [
-            {
-                responsivePriority: 1,
-                targets: [1, 2, 7] // Prioritize Full Name, Email, and Actions for visibility
-            }
-        ],
-        order: [[1, 'asc']],
-        language: {
-            paginate: {
-                next: '<i class="fas fa-angle-right"></i>',
-                previous: '<i class="fas fa-angle-left"></i>'
-            }
-        }
+        responsive: false,
+        scrollX: true,
+        order: [[1, 'asc']]
     });
 });
 </script>
@@ -81,22 +43,11 @@ $(document).ready(function() {
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Members List</h5>
-            <div class="d-flex gap-2">
-                @can('export-members')
-                <a href="{{ route('exports.index') }}" class="btn btn-outline-info btn-sm">
-                    <i class="tf-icons ti ti-download me-1"></i> Advanced Export
-                </a>
-                @else
-                <a href="{{ route('exports.index') }}" class="btn btn-outline-info btn-sm">
-                    <i class="tf-icons ti ti-download me-1"></i> Advanced Export (No Permission)
-                </a>
-                @endcan
-                @can('member-create')
-                <a href="{{ route('members.create') }}" class="btn btn-primary">
-                    <i class="tf-icons ti ti-plus me-1"></i> Add Member
-                </a>
-                @endcan
-            </div>
+            @can('member-create')
+            <a href="{{ route('members.create') }}" class="btn btn-primary">
+                <i class="ti ti-plus me-1"></i> Add Member
+            </a>
+            @endcan
         </div>
         
         <div class="card-datatable table-responsive">
@@ -104,11 +55,10 @@ $(document).ready(function() {
                 <thead>
                     <tr>
                         <th width="5%">#</th>
-                        <th>Full Name</th>
+                        <th>Name</th>
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Membership Type</th>
-                        <th>Created Date</th>
                         <th>Status</th>
                         <th width="10%">Actions</th>
                     </tr>
