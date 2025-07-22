@@ -2,68 +2,43 @@
 
 namespace App\Http\Controllers\Backend;
 
-use App\Http\Controllers\Controller;
-use App\Models\Attendance;
-use App\Models\Member;
-use App\Services\AttendanceService;
-use Illuminate\Http\Request;
 use DataTables;
 use Carbon\Carbon;
+use App\Models\Member;
+use App\Models\Attendance;
+use Illuminate\Http\Request;
+use App\Services\MemberService;
+use App\Services\AttendanceService;
+use App\Http\Controllers\Controller;
 
 class AttendanceController extends Controller
 {
     protected $attendanceService;
+    protected $memberService;
 
-    public function __construct(AttendanceService $attendanceService)
+    public function __construct(AttendanceService $attendanceService, MemberService $memberService)
     {
         $this->middleware('permission:attendance-list', ['only' => ['index']]);
         $this->middleware('permission:attendance-create', ['only' => ['checkIn', 'checkOut']]);
         
         $this->attendanceService = $attendanceService;
+        $this->memberService = $memberService;
     }
 
     public function index(Request $request)
-    {
-        if ($request->ajax()) {
-            $members = $this->memberService->getMembers($request);
-            
-            return DataTables::eloquent($members)
-                ->addIndexColumn()
-                ->addColumn('full_name', function ($member) {
-                    return $member->full_name;
-                })
-                ->addColumn('membership_type', function ($member) {
-                    return $member->membershipType?->type_name ?? 'N/A';
-                })
-                ->addColumn('status_badge', function ($member) {
-                    $badgeClass = match($member->status) {
-                        'Active' => 'success',
-                        'Inactive' => 'secondary',
-                        'Suspended' => 'danger',
-                        default => 'secondary'
-                    };
-                    return '<span class="badge bg-' . $badgeClass . '">' . $member->status . '</span>';
-                })
-                ->addColumn('created_at', function ($member) {
-                    return $member->created_at->format('Y-m-d H:i:s');
-                })
-                ->addColumn('action', function ($member) {
-                    $btn = '<div class="m-sm-n1">';
-                    $btn .= '<div class="my-1 text-center"><a rel="tooltip" class="button-size btn btn-sm btn-success" href="' . route('members.edit', $member->id) . '" data-original-title="" title="Edit"><i class="fas fa-edit"></i><div class="ripple-container"></div></a></div>';
-                    $btn .= '<div class="my-1 text-center"><a rel="tooltip" class="button-size btn btn-sm btn-primary" href="' . route('members.show', $member->id) . '" data-original-title="" title="Show"><i class="fas fa-eye"></i><div class="ripple-container"></div></a></div>';
-                    $btn .= '<div class="my-1 text-center"><form action="' . route('members.destroy', $member->id) . '" method="POST" id="del-member-' . $member->id . '" class="d-inline"><input type="hidden" name="_token" value="' . csrf_token() . '"><input type="hidden" name="_method" value="DELETE"><button type="button" class="button-size btn btn-sm btn-danger destroy_btn" data-original-title="" data-origin="del-member-' . $member->id . '" title="Delete"><i class="fas fa-trash"></i></button></form></div>';
-                    if (auth()->user()->can('member-export')) {
-                        $btn .= '<div class="my-1 text-center"><a rel="tooltip" class="button-size btn btn-sm btn-info" href="' . route('members.export-attendance', $member->id) . '" data-original-title="" title="Export Attendance"><i class="fas fa-download"></i><div class="ripple-container"></div></a></div>';
-                    }
-                    $btn .= '</div>';
-                    return $btn;
-                })
-                ->rawColumns(['status_badge', 'action'])
-                ->make(true);
-        }
+{
+    // Get the base query with filters applied from the service layer.
+    $query = $this->attendanceService->getAttendanceEloquent($request);
 
-        return view('backend.members.index');
-    }
+    // Paginate the results, and ensure filter parameters are kept on pagination links.
+    $attendances = $query->paginate(15)->withQueryString();
+
+    return view('backend.attendance.index', [
+        'attendances' => $attendances,
+        'members' => Member::active()->get(), //
+    ]);
+}
+
 
     public function checkIn(Request $request)
     {

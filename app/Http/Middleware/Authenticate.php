@@ -3,19 +3,50 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Auth\Factory as Auth;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
-/**
- * Authenticate Middleware
- *
- * Ensures the incoming request is authenticated using the specified guards.
- * Redirects unauthenticated users to the login page with an error message.
- * Includes logging for debugging and traceability.
- */
-class Authenticate
+class Authenticate implements AuthenticatesRequests
 {
+    /**
+     * The authentication factory instance.
+     *
+     * @var \Illuminate\Contracts\Auth\Factory
+     */
+    protected $auth;
+
+    /**
+     * The callback that should be used to generate the authentication redirect path.
+     *
+     * @var callable
+     */
+    protected static $redirectToCallback;
+
+    /**
+     * Create a new middleware instance.
+     *
+     * @param  \Illuminate\Contracts\Auth\Factory  $auth
+     * @return void
+     */
+    public function __construct(Auth $auth)
+    {
+        $this->auth = $auth;
+    }
+
+    /**
+     * Specify the guards for the middleware.
+     *
+     * @param  string  $guard
+     * @param  string  $others
+     * @return string
+     */
+    public static function using($guard, ...$others)
+    {
+        return static::class.':'.implode(',', [$guard, ...$others]);
+    }
+
     /**
      * Handle an incoming request.
      *
@@ -23,31 +54,81 @@ class Authenticate
      * @param  \Closure  $next
      * @param  string[]  ...$guards
      * @return mixed
+     *
+     * @throws \Illuminate\Auth\AuthenticationException
      */
-    public function handle(Request $request, Closure $next, ...$guards)
+    public function handle($request, Closure $next, ...$guards)
     {
-        $guards = empty($guards) ? [null] : $guards;
+        
+        $this->authenticate($request, $guards);
+
+        return $next($request);
+    }
+
+    /**
+     * Determine if the user is logged in to any of the given guards.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  array  $guards
+     * @return void
+     *
+     * @throws \Illuminate\Auth\AuthenticationException
+     */
+    protected function authenticate($request, array $guards)
+    {
+        if (empty($guards)) {
+            $guards = [null];
+        }
 
         foreach ($guards as $guard) {
-            if (Auth::guard($guard)->check()) {
-                $user = Auth::guard($guard)->user();
-                \Log::debug('AuthenticateMiddleware: User authenticated', [
-                    'email' => $user->email,
-                    'guard' => $guard ?: 'default',
-                    'path' => $request->path(),
-                    'roles' => $user->getRoleNames()->toJson(),
-                    'session_id' => $request->session()->getId(),
-                ]);
-                return $next($request);
+            if ($this->auth->guard($guard)->check()) {
+                return $this->auth->shouldUse($guard);
             }
         }
 
-        \Log::warning('AuthenticateMiddleware: Unauthenticated access attempt', [
-            'path' => $request->path(),
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-
-        return redirect()->route('login')->with('error', 'Authentication required. Please log in.');
+        $this->unauthenticated($request, $guards);
     }
+
+    /**
+     * Handle an unauthenticated user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  array  $guards
+     * @return void
+     *
+     * @throws \Illuminate\Auth\AuthenticationException
+     */
+    protected function unauthenticated($request, array $guards)
+    {
+        throw new AuthenticationException(
+            'Unauthenticated.',
+            $guards,
+            $request->expectsJson() ? null : $this->redirectTo($request),
+        );
+    }
+
+    /**
+     * Get the path the user should be redirected to when they are not authenticated.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return string|null
+     */
+    protected function redirectTo(Request $request)
+{
+    if (! $request->expectsJson()) {
+        // Redirect based on the URL path pattern
+        if ($request->is('admin/*')) {
+            return route('login');
+        } else {
+            // Default redirect for other non-JSON requests (e.g., web guard)
+            return route('login');
+        }
+    }
+
+    // For API requests expecting JSON, return null so it does not attempt a redirect
+    return null;
+}
+
+
+    
 }

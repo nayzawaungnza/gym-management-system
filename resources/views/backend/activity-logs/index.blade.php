@@ -43,7 +43,7 @@ $(document).ready(function() {
             {data: 'causer_name', name: 'causer.name'},
             {data: 'subject_type_formatted', name: 'subject_type'},
             {data: 'subject_name', name: 'subject_name', orderable: false},
-            {data: 'ip_location', name: 'ip_address'},
+            //{data: 'ip_location', name: 'ip_address'},
             {data: 'action', name: 'action', orderable: false, searchable: false}
         ],
         responsive: true,
@@ -250,7 +250,7 @@ function performCleanup() {
                         <th>User</th>
                         <th>Subject Type</th>
                         <th>Subject</th>
-                        <th>IP/Location</th>
+                        {{-- <th>IP/Location</th> --}}
                         <th width="10%">Actions</th>
                     </tr>
                 </thead>

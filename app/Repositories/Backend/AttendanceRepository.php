@@ -22,7 +22,7 @@ class AttendanceRepository
     /**
      * Get attendance with filters and pagination
      */
-    public function getAttendanceEloquent(Request $request = null): LengthAwarePaginator
+    public function getAttendanceEloquent(Request $request = null)
     {
         $query = $this->model->with(['member'])
             ->orderBy('check_in_time', 'desc');
@@ -35,7 +35,7 @@ class AttendanceRepository
 
             // Filter by member name or ID
             if ($request->filled('search')) {
-                $search = $request->search;
+                $search = $request->input('search.value', $request->search);
                 $query->whereHas('member', function ($q) use ($search) {
                     $q->where('first_name', 'like', "%{$search}%")
                       ->orWhere('last_name', 'like', "%{$search}%")
@@ -58,7 +58,7 @@ class AttendanceRepository
                 $query->where('check_in_method', $request->check_in_method);
             }
 
-            // Filter by status (checked out or still checked in)
+            // Filter by status
             if ($request->filled('status')) {
                 if ($request->status === 'checked_in') {
                     $query->whereNull('check_out_time');
@@ -73,7 +73,7 @@ class AttendanceRepository
             }
         }
 
-        return $query->paginate(15);
+        return $query;
     }
 
     /**
@@ -115,6 +115,10 @@ class AttendanceRepository
         }
 
         return $query->get();
+    }
+    public function getAttendance()
+    {
+        
     }
 
     /**

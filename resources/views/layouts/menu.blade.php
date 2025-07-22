@@ -39,20 +39,22 @@
 </li>
 
 <!-- Equipment -->
-<li class="menu-item {{ $activePage == 'equipment' ? 'active' : '' }}">
+{{-- <li class="menu-item {{ $activePage == 'equipment' ? 'active' : '' }}">
     <a href="{{ route('equipment.index') }}" class="menu-link">
         <i class="menu-icon tf-icons ti ti-barbell"></i>
         <div data-i18n="Equipment">Equipment</div>
     </a>
-</li>
+</li> --}}
 
 <!-- Attendance -->
 <li class="menu-item {{ $activePage == 'attendance' ? 'active' : '' }}">
-    <a href="{{ route('attendance.index') }}" class="menu-link">
+    <a href="{{ route('admin.attendance.index') }}" class="menu-link">
         <i class="menu-icon tf-icons ti ti-clipboard-check"></i>
         <div data-i18n="Attendance">Attendance</div>
     </a>
 </li>
+
+
 {{-- Roles --}}
 <li class="menu-item {{ $activePage == 'roles' ? 'active' : '' }}">
     <a href="{{ route('roles.index') }}" class="menu-link">

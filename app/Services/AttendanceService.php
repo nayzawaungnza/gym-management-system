@@ -9,7 +9,6 @@ use App\Services\Interfaces\AttendanceServiceInterface;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -25,11 +24,15 @@ class AttendanceService implements AttendanceServiceInterface
     /**
      * Get paginated attendance records with filters
      */
-    public function getAttendance(Request $request): LengthAwarePaginator
+    public function getAttendance()
+    {
+        return $this->attendanceRepository->getAttendance();
+    }
+
+    public function getAttendanceEloquent(Request $request)
     {
         return $this->attendanceRepository->getAttendanceEloquent($request);
     }
-
     /**
      * Check in a member
      */

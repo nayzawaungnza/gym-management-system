@@ -3,10 +3,11 @@
 namespace App\Services\Interfaces;
 
 use App\Models\Payment;
+use Illuminate\Http\Request;
 
 interface PaymentServiceInterface
 {
-    public function getPaymentEloquent();
+    public function getPaymentsEloquent(Request $request);
 public function getPayment(Payment $payment);
 public function createPayment( array $data);
 public function updatePayment(Payment $payment, array $data);

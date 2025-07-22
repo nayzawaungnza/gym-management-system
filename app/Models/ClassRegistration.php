@@ -15,11 +15,15 @@ class ClassRegistration extends Model
         'member_id',
         'class_id',
         'registration_date',
-        'status'
+        'class_date',
+        'status',
+        'payment_status',
+        'notes'
     ];
 
     protected $casts = [
-        'registration_date' => 'datetime'
+        'registration_date' => 'datetime',
+        'class_date' => 'date'
     ];
 
     public function member(): BelongsTo
@@ -32,18 +36,43 @@ class ClassRegistration extends Model
         return $this->belongsTo(GymClass::class, 'class_id');
     }
 
+    public function payment()
+    {
+        return $this->hasOne(Payment::class, 'class_registration_id');
+    }
+
     public function scopeRegistered($query)
     {
-        return $query->where('status', 'Registered');
+        return $query->where('status', 'registered');
     }
 
     public function scopeAttended($query)
     {
-        return $query->where('status', 'Attended');
+        return $query->where('status', 'attended');
     }
 
     public function scopeCancelled($query)
     {
-        return $query->where('status', 'Cancelled');
+        return $query->where('status', 'cancelled');
+    }
+
+    public function scopeNoShow($query)
+    {
+        return $query->where('status', 'no_show');
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('payment_status', 'paid');
+    }
+
+    public function scopePendingPayment($query)
+    {
+        return $query->where('payment_status', 'pending');
+    }
+
+    public function scopeRefunded($query)
+    {
+        return $query->where('payment_status', 'refunded');
     }
 }

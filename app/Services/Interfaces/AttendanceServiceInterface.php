@@ -12,7 +12,7 @@ interface AttendanceServiceInterface
     /**
      * Get paginated attendance records with filters
      */
-    public function getAttendance(Request $request): LengthAwarePaginator;
+    public function getAttendance();
 
     /**
      * Check in a member
@@ -103,4 +103,7 @@ interface AttendanceServiceInterface
      * Get attendance dashboard data
      */
     public function getDashboardData(): array;
+
+    public function getAttendanceEloquent(Request $request);
+    
 }

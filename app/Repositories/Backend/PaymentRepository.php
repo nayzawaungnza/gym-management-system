@@ -9,12 +9,36 @@ class PaymentRepository extends BaseRepository
         return Payment::class;
     }
 
-    public function getPaymentsEloquent()
+    public function getPaymentsEloquent($request = null)
     {
-        return $this->model->query()
-            ->with(['member', 'class'])
+        $query = $this->model->with(['member', 'membershipType', 'classRegistration', 'paymentMethod'])
             ->orderBy('created_at', 'desc');
+
+        if ($request) {
+            if ($request->has('member_id')) {
+                $query->where('member_id', $request->input('member_id'));
+            }
+
+            if ($request->has('status')) {
+                $query->where('status', $request->input('status'));
+            }
+
+            if ($request->has('payment_method_id')) {
+                $query->where('payment_method_id', $request->input('payment_method_id'));
+            }
+
+            if ($request->filled('start_date')) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+
+            if ($request->filled('end_date')) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+        }
+
+        return $query;
     }
+
 
     public function getById($id, $with = [])
     {
@@ -26,12 +50,14 @@ class PaymentRepository extends BaseRepository
         $payment = $this->model->create([
             'member_id' => $data['member_id'],
             'membership_type_id' => $data['membership_type_id'] ?? null,
+            'class_registration_id' => $data['class_registration_id'] ?? null,
+            'payment_method_id' => $data['payment_method_id'] ?? null,
             'class_id' => $data['class_id'],
             'transaction_id' => $data['transaction_id'],
             'amount' => $data['amount'],
             'status' => $data['status'] ?? 'pending',
             'payment_date' => $data['payment_date'] ?? now(),
-            'payment_method' => $data['payment_method'] ?? 'cash',
+            //'payment_method' => $data['payment_method'] ?? 'cash',
         ]);
         return $payment;
     }

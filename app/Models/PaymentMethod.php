@@ -21,18 +21,19 @@ class PaymentMethod extends Model
     ];
 
 
-    public function scopeFilter($query, $filter)
+    public function scopeFilter($query, array $filter)
     {
         if (isset($filter['name']) && $name = $filter['name']) {
-            $query->where('name', $name);
+            $query->where('display_name', 'like', "%{$name}%");
         }
+        
         if (isset($filter['is_active'])) {
-            $query->where('is_active', $filter['is_active']);
+            $query->where('is_active', (bool)$filter['is_active']);
         }
-
-        $sortBy = isset($order['sortBy']) ? $order['sortBy'] : 'created_at';
-        $orderBy = isset($order['orderBy']) ? $order['orderBy'] : 'desc';
-
+        
+        $sortBy = $filter['sortBy'] ?? 'created_at';
+        $orderBy = $filter['orderBy'] ?? 'desc';
+        
         $query->orderBy($sortBy, $orderBy);
     }
 }

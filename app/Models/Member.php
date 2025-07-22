@@ -110,11 +110,12 @@ class Member extends Model
      * Check if membership is active
      */
     public function getIsActiveAttribute(): bool
-    {
-        return $this->status === 'active' && 
-               $this->membership_end_date && 
-               $this->membership_end_date->isFuture();
-    }
+{
+    // FIX: Check that membership_end_date is not null before calling isFuture() on it.
+    return $this->status === 'active' && 
+           $this->membership_end_date && 
+           $this->membership_end_date->isFuture();
+}
 
     /**
      * Get membership status badge color

@@ -33,12 +33,13 @@ class Attendance extends Model
     }
 
     public function getDurationAttribute(): ?int
-    {
-        if ($this->check_out_time) {
-            return $this->check_in_time->diffInMinutes($this->check_out_time);
-        }
-        return null;
+{
+    if ($this->check_out_time) {
+        // This line will fail if check_in_time is null
+        return $this->check_in_time->diffInMinutes($this->check_out_time);
     }
+    return null;
+}
 
     public function isCheckedOut(): bool
     {

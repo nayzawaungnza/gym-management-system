@@ -17,6 +17,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Foundation\Auth\ThrottlesLogins;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -87,13 +88,13 @@ class AuthController extends Controller
             return $this->handleInactiveAccount($request, $user);
         }
 
-        if (!$user->hasVerifiedEmail()) {
-            return $this->handleUnverifiedEmail($user);
-        }
+        // if (!$user->hasVerifiedEmail()) {
+        //     return $this->handleUnverifiedEmail($user);
+        // }
 
-        if ($this->requiresTwoFactorAuth($user)) {
-            return $this->handleTwoFactorAuth($user);
-        }
+        // if ($this->requiresTwoFactorAuth($user)) {
+        //     return $this->handleTwoFactorAuth($user);
+        // }
 
         return $this->redirectBasedOnRole($user);
     }
@@ -188,6 +189,51 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
+    // public function register(Request $request)
+    // {
+    //     $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'email' => 'required|string|email|max:255|unique:users',
+    //         'password' => 'required|string|min:8|confirmed',
+    //         'phone' => 'nullable|string|max:15',
+    //         'role' => 'required|in:Member,Trainer',
+    //         'terms' => 'required|accepted',
+    //     ]);
+
+    //     $user = User::create([
+    //         'name' => $request->name,
+    //         'email' => $request->email,
+    //         'password' => Hash::make($request->password),
+    //         'email_verified_at' => null,
+    //         'is_admin' => $request->role === 'Member' ? 0 : 2,
+    //         'is_active' => true,
+    //     ]);
+
+    //     $user->assignRole($request->role);
+
+    //     if ($request->role === 'Member') {
+    //         $this->createMemberProfile($user, $request);
+    //     } elseif ($request->role === 'Trainer') {
+    //         $this->createTrainerProfile($user, $request);
+    //     }
+
+    //     event(new Registered($user));
+
+    //     $activity_data = [
+    //         'subject' => $user,
+    //         'event' => config('constants.ACTIVITY_LOG.CREATED_EVENT_NAME'),
+    //         'description' => sprintf('New user (%s) registered as %s.', $user->email, $request->role),
+    //     ];
+    //     try {
+    //         saveActivityLog($activity_data);
+    //     } catch (\Exception $e) {
+    //         Log::error('Failed to save activity log: ' . $e->getMessage());
+    //     }
+
+    //     return redirect()->route('verification.notice')
+    //         ->with('success', 'Registration successful! Please check your email to verify your account.');
+    // }
+
     public function register(Request $request)
     {
         $request->validate([
@@ -199,39 +245,53 @@ class AuthController extends Controller
             'terms' => 'required|accepted',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'email_verified_at' => null,
-            'is_admin' => $request->role === 'Member' ? 0 : 2,
-            'is_active' => true,
-        ]);
+        DB::beginTransaction();
 
-        $user->assignRole($request->role);
-
-        if ($request->role === 'Member') {
-            $this->createMemberProfile($user, $request);
-        } elseif ($request->role === 'Trainer') {
-            $this->createTrainerProfile($user, $request);
-        }
-
-        event(new Registered($user));
-
-        $activity_data = [
-            'subject' => $user,
-            'event' => config('constants.ACTIVITY_LOG.CREATED_EVENT_NAME'),
-            'description' => sprintf('New user (%s) registered as %s.', $user->email, $request->role),
-        ];
         try {
-            saveActivityLog($activity_data);
-        } catch (\Exception $e) {
-            Log::error('Failed to save activity log: ' . $e->getMessage());
-        }
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
 
-        return redirect()->route('verification.notice')
-            ->with('success', 'Registration successful! Please check your email to verify your account.');
+                // 👇 Auto-verify for testing (change to `now()` or null based on env)
+                'email_verified_at' => now(),
+
+                'is_admin' => $request->role === 'Member' ? 0 : 2,
+                'is_active' => true,
+            ]);
+
+            $user->assignRole($request->role);
+
+            if ($request->role === 'Member') {
+                $this->createMemberProfile($user, $request);
+            } elseif ($request->role === 'Trainer') {
+                $this->createTrainerProfile($user, $request);
+            }
+
+            event(new Registered($user));
+
+            $activity_data = [
+                'subject' => $user,
+                'event' => config('constants.ACTIVITY_LOG.CREATED_EVENT_NAME'),
+                'description' => sprintf('New user (%s) registered as %s.', $user->email, $request->role),
+            ];
+            try {
+                saveActivityLog($activity_data);
+            } catch (\Exception $e) {
+                Log::error('Failed to save activity log: ' . $e->getMessage());
+            }
+
+            DB::commit();
+
+            return redirect()->route('verification.notice')
+                ->with('success', 'Registration successful! Please check your email to verify your account.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('User registration failed: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Registration failed. Please try again.')->withInput();
+        }
     }
+
 
     public function logout(Request $request)
     {
@@ -322,8 +382,9 @@ class AuthController extends Controller
             event(new Verified($user));
             Log::info('Email verified successfully', ['email' => $user->email]);
         }
+        return redirect()->intended('/dashboard');
 
-        return redirect()->intended('/dashboard')->with('verified', true);
+        //return redirect()->intended('/dashboard')->with('verified', true);
     }
 
     public function resendVerificationEmail(Request $request)
@@ -343,25 +404,35 @@ class AuthController extends Controller
     private function createMemberProfile(User $user, Request $request)
     {
         $defaultMembershipType = \App\Models\MembershipType::where('type_name', 'Basic Monthly')->first();
-
+        
+        $memberCount = Member::withTrashed()->count();
+        
+        $memberId = 'MEM' . str_pad($memberCount + 1, 6, '0', STR_PAD_LEFT);
+        //dd($user->toArray());
         Member::create([
             'first_name' => explode(' ', $user->name)[0],
             'last_name' => explode(' ', $user->name)[1] ?? '',
+            'user_id' => $user->id,
             'email' => $user->email,
             'phone' => $request->phone,
             'join_date' => now(),
             'membership_type_id' => $defaultMembershipType?->id,
+            'member_id' => $memberId,
             'status' => 'Active',
         ]);
     }
 
     private function createTrainerProfile(User $user, Request $request)
     {
+        $trainerCount = Trainer::withTrashed()->count();
+        $trainerId = 'TR' . str_pad($trainerCount + 1, 6, '0', STR_PAD_LEFT);
         Trainer::create([
             'first_name' => explode(' ', $user->name)[0],
             'last_name' => explode(' ', $user->name)[1] ?? '',
+            'user_id' => $user->id,
             'email' => $user->email,
             'phone' => $request->phone,
+            'trainer_id' => $trainerId,
             'hire_date' => now(),
             'is_active' => false,
         ]);

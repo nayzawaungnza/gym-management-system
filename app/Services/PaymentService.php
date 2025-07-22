@@ -16,9 +16,9 @@ class PaymentService implements PaymentServiceInterface
         $this->paymentRepository = $paymentRepository;
     }
 
-    public function getPaymentEloquent()
+    public function getPaymentsEloquent(Request $request)
     {
-        return $this->paymentRepository->getPaymentsEloquent();
+        return $this->paymentRepository->getPaymentsEloquent($request);
     }
 
     public function getPayment(Payment $payment)

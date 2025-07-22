@@ -236,7 +236,7 @@
         </div>
 
         <!-- Recent Activities -->
-        <div class="col-lg-6 mb-4">
+        {{-- <div class="col-lg-6 mb-4">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
@@ -263,7 +263,7 @@
                     @endif
                 </div>
             </div>
-        </div>
+        </div> --}}
     </div>
 
     <!-- Flagged Attendances -->

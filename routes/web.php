@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [App\Http\Controllers\Frontend\MainController::class, 'index'])->name('home');
+Route::post('/contact', [App\Http\Controllers\Frontend\MainController::class, 'contact'])->name('contact.store');
+Route::post('/classes/enroll', [App\Http\Controllers\Frontend\MainController::class, 'enrollInClass'])->name('classes.enroll')->middleware('auth');
 
 /*
 |--------------------------------------------------------------------------
@@ -51,27 +51,64 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Member Frontend Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['auth', 'check_user_active'])->name('member.')->group(function () {
+        // Member Dashboard
+        Route::get('/dashboard', [App\Http\Controllers\Frontend\MemberController::class, 'dashboard'])->name('dashboard');
+        
+        // Profile Management
+        Route::get('/profile', [App\Http\Controllers\Frontend\MemberController::class, 'profile'])->name('profile');
+        Route::get('/profile/create', [App\Http\Controllers\Frontend\MemberController::class, 'createProfile'])->name('profile.create');
+        Route::get('/profile/edit', [App\Http\Controllers\Frontend\MemberController::class, 'editProfile'])->name('profile.edit');
+        Route::post('/profile/store', [App\Http\Controllers\Frontend\MemberController::class, 'storeProfile'])->name('profile.store');
+        Route::post('/profile/update', [App\Http\Controllers\Frontend\MemberController::class, 'updateProfile'])->name('profile.update');
+        
+        // Class Management
+        Route::get('/classes', [App\Http\Controllers\Frontend\MemberController::class, 'classes'])->name('classes');
+        Route::post('/classes/{class}/enroll', [App\Http\Controllers\Frontend\MemberController::class, 'enrollClass'])->name('classes.enroll');
+        Route::delete('/classes/{registration}/cancel', [App\Http\Controllers\Frontend\MemberController::class, 'cancelClass'])->name('classes.cancel');
+        Route::get('/my-classes', [App\Http\Controllers\Frontend\MemberController::class, 'myClasses'])->name('my-classes');
+        
+        // Attendance
+        Route::get('/attendances', [App\Http\Controllers\Frontend\MemberController::class, 'attendance'])->name('attendance');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attendance Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Frontend\AttendanceController::class, 'index'])->name('index');
+        Route::post('/check-in', [App\Http\Controllers\Frontend\AttendanceController::class, 'checkIn'])->name('check-in');
+        Route::post('/check-out', [App\Http\Controllers\Frontend\AttendanceController::class, 'checkOut'])->name('check-out');
+        Route::get('/status', [App\Http\Controllers\Frontend\AttendanceController::class, 'status'])->name('status');
+    });
+    /*
+    |--------------------------------------------------------------------------
     | Admin Routes
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['role:Admin'])->prefix('admin')->group(function () {
+    Route::middleware(['auth', 'check_user_active', 'role:Admin'])->prefix('admin')->group(function () {
         // Admin Dashboard
         Route::get('/dashboard', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
         
         Route::get('/stats', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getStats'])->name('admin.stats');
-    Route::get('/revenue-chart', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getRevenueChart'])->name('admin.revenue-chart');
-    Route::get('/member-growth', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getMemberGrowth'])->name('admin.member-growth');
-    Route::get('/attendance-overview', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getAttendanceOverview'])->name('admin.attendance-overview');
-    Route::get('/membership-type-distribution', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getMembershipTypeDistribution'])->name('admin.membership-type-distribution');
-    // Add export routes as needed
-    Route::get('/exports/comprehensive', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportComprehensive'])->name('admin.exports.comprehensive');
-    Route::get('/exports/financial', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportFinancial'])->name('admin.exports.financial');
-    Route::get('/exports/analytics', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportAnalytics'])->name('admin.exports.analytics');
+        Route::get('/revenue-chart', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getRevenueChart'])->name('admin.revenue-chart');
+        Route::get('/member-growth', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getMemberGrowth'])->name('admin.member-growth');
+        Route::get('/attendance-overview', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getAttendanceOverview'])->name('admin.attendance-overview');
+        Route::get('/membership-type-distribution', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'getMembershipTypeDistribution'])->name('admin.membership-type-distribution');
+        // Add export routes as needed
+        Route::get('/exports/comprehensive', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportComprehensive'])->name('admin.exports.comprehensive');
+        Route::get('/exports/financial', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportFinancial'])->name('admin.exports.financial');
+        Route::get('/exports/analytics', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportAnalytics'])->name('admin.exports.analytics');
 
         // Members Management
         Route::resource('members', App\Http\Controllers\Backend\MemberController::class);
         Route::post('members/{member}/change-status', [App\Http\Controllers\Backend\MemberController::class, 'changeStatus'])->name('members.change-status');
-         Route::post('members/calculate-end-date', [App\Http\Controllers\Backend\MemberController::class, 'calculateEndDate'])->name('members.calculate-end-date');
+        Route::post('members/calculate-end-date', [App\Http\Controllers\Backend\MemberController::class, 'calculateEndDate'])->name('members.calculate-end-date');
          
         // Trainers Management
         Route::resource('trainers', App\Http\Controllers\Backend\TrainerController::class);
@@ -90,10 +127,10 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
         Route::post('equipment/{equipment}/maintenance', [App\Http\Controllers\Backend\EquipmentController::class, 'scheduleMaintenance'])->name('equipment.maintenance');
         
         // Attendance Management
-        Route::get('attendance', [App\Http\Controllers\Backend\AttendanceController::class, 'index'])->name('attendance.index');
-        Route::post('attendance/check-in', [App\Http\Controllers\Backend\AttendanceController::class, 'checkIn'])->name('attendance.check-in');
-        Route::post('attendance/check-out', [App\Http\Controllers\Backend\AttendanceController::class, 'checkOut'])->name('attendance.check-out');
-        Route::get('attendance/verify/{token}', [App\Http\Controllers\Backend\AttendanceController::class, 'verifyQR'])->name('attendance.verify');
+         Route::get('attendance', [App\Http\Controllers\Backend\AttendanceController::class, 'index'])->name('admin.attendance.index');
+        // Route::post('attendance/check-in', [App\Http\Controllers\Backend\AttendanceController::class, 'checkIn'])->name('attendance.check-in');
+        // Route::post('attendance/check-out', [App\Http\Controllers\Backend\AttendanceController::class, 'checkOut'])->name('attendance.check-out');
+        // Route::get('attendance/verify/{token}', [App\Http\Controllers\Backend\AttendanceController::class, 'verifyQR'])->name('attendance.verify');
         
         // Activity Logs
         Route::get('activity-logs', [App\Http\Controllers\Backend\ActivityLogController::class, 'index'])->name('activity_logs.index');
@@ -120,6 +157,7 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
             Route::post('quick', [App\Http\Controllers\Backend\Admin\AdminExportController::class, 'quickExport'])->name('quick');
         });
         
+        
         // Member specific exports
         Route::post('members/{member}/export-attendance', [App\Http\Controllers\Backend\MemberController::class, 'exportAttendance'])->name('members.export-attendance');
         Route::post('members/bulk-export', [App\Http\Controllers\Backend\MemberController::class, 'bulkExport'])->name('members.bulk-export');
@@ -130,7 +168,7 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
     | Trainer Routes
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['role:Trainer'])->prefix('trainer')->name('trainer.')->group(function () {
+    Route::middleware(['auth', 'check_user_active', 'role:Trainer'])->prefix('trainer')->name('trainer.')->group(function () {
         // Trainer Dashboard
         Route::get('/dashboard', [App\Http\Controllers\Backend\Trainer\TrainerDashboardController::class, 'index'])->name('dashboard');
         
@@ -158,34 +196,34 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
     | Member Routes (Default Dashboard)
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['role:Member'])->group(function () {
+    Route::middleware(['auth', 'check_user_active', 'role:Member'])->group(function () {
         // Member Dashboard
-        Route::get('/dashboard', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'index'])->name('dashboard');
+       // Route::get('/dashboard', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'index'])->name('dashboard');
         
         // Member Profile
         Route::prefix('member')->name('member.')->group(function () {
-            Route::get('profile', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'profile'])->name('profile');
-            Route::get('/member/profile/create', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'createProfile'])->name('member.profile.create');
-            Route::post('profile/update', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'updateProfile'])->name('profile.update');
+        //     Route::get('profile', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'profile'])->name('profile');
+        //     Route::get('/member/profile/create', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'createProfile'])->name('member.profile.create');
+        //     Route::post('profile/update', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'updateProfile'])->name('profile.update');
             
-            // Schedule and Classes
-            Route::get('schedule', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'schedule'])->name('schedule');
-            Route::post('classes/{class}/register', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'registerClass'])->name('classes.register');
-            Route::post('classes/{registration}/cancel', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'cancelRegistration'])->name('classes.cancel');
+        //     // Schedule and Classes
+        //     Route::get('schedule', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'schedule'])->name('schedule');
+        //     Route::post('classes/{class}/register', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'registerClass'])->name('classes.register');
+        //     Route::post('classes/{registration}/cancel', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'cancelRegistration'])->name('classes.cancel');
             
-            // Payments
-            Route::get('payments', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'payments'])->name('payments');
-            Route::post('payments/make', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'makePayment'])->name('payments.make');
+        //     // Payments
+        //     Route::get('payments', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'payments'])->name('payments');
+        //     Route::post('payments/make', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'makePayment'])->name('payments.make');
             
-            // Attendance
-            Route::get('attendance', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'attendance'])->name('attendance');
-            Route::post('attendance/check-in', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'checkIn'])->name('attendance.check-in');
-            Route::post('attendance/check-out', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'checkOut'])->name('attendance.check-out');
+        //     // Attendance
+        //     Route::get('attendance', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'attendance'])->name('attendance');
+        //     Route::post('attendance/check-in', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'checkIn'])->name('attendance.check-in');
+        //     Route::post('attendance/check-out', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'checkOut'])->name('attendance.check-out');
             
-            // QR Code Check-in
-            Route::get('qr-checkin', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'qrCheckin'])->name('qr-checkin');
-            Route::post('qr-verify', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'verifyQR'])->name('qr-verify');
-        });
+        //     // QR Code Check-in
+        //     Route::get('qr-checkin', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'qrCheckin'])->name('qr-checkin');
+        //     Route::post('qr-verify', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'verifyQR'])->name('qr-verify');
+         });
     });
 });
 ?>

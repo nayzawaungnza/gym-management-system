@@ -73,38 +73,51 @@ class AttendanceExport implements FromQuery, WithHeadings, WithMapping, WithStyl
         ];
     }
 
-    public function map($attendance): array
-    {
-        $checkInTime = Carbon::parse($attendance->check_in_time);
-        $checkOutTime = $attendance->check_out_time ? Carbon::parse($attendance->check_out_time) : null;
-        
-        $durationMinutes = null;
-        $durationHours = null;
-        $status = 'Still Inside';
+    // app/Exports/AttendanceExport.php
 
-        if ($checkOutTime) {
-            $durationMinutes = $checkInTime->diffInMinutes($checkOutTime);
-            $durationHours = round($durationMinutes / 60, 2);
-            $status = 'Checked Out';
-        }
-
+public function map($attendance): array
+{
+    // FIX: Check for null check_in_time before parsing.
+    if (!$attendance->check_in_time) {
+        // Return an empty or placeholder row for invalid data
         return [
-            $attendance->member_id,
-            $attendance->member?->full_name ?? 'Unknown Member',
-            $attendance->member?->email ?? 'N/A',
-            $attendance->member?->membershipType?->type_name ?? 'N/A',
-            $checkInTime->format('Y-m-d'),
-            $checkInTime->format('H:i:s'),
-            $checkOutTime?->format('Y-m-d') ?? '',
-            $checkOutTime?->format('H:i:s') ?? '',
-            $durationMinutes ?? '',
-            $durationHours ?? '',
-            $status,
-            $checkInTime->format('l'),
-            $checkInTime->format('F'),
-            $checkInTime->format('Y')
+            $attendance->member_id ?? 'N/A',
+            'Invalid Record',
+            '', '', '', 'Invalid Date', '', '', '', '', '', '', '', ''
         ];
     }
+
+    $checkInTime = Carbon::parse($attendance->check_in_time);
+    $checkOutTime = $attendance->check_out_time ? Carbon::parse($attendance->check_out_time) : null;
+    
+    $durationMinutes = null;
+    $durationHours = null;
+    $status = 'Still Inside';
+
+    if ($checkOutTime) {
+        // This is now safe because we already verified checkInTime
+        $durationMinutes = $checkInTime->diffInMinutes($checkOutTime);
+        $durationHours = round($durationMinutes / 60, 2);
+        $status = 'Checked Out';
+    }
+
+    return [
+        $attendance->member?->member_id ?? 'N/A', // Using optional chaining for safety
+        $attendance->member?->full_name ?? 'Unknown Member',
+        $attendance->member?->email ?? 'N/A',
+        $attendance->member?->membershipType?->type_name ?? 'N/A',
+        $checkInTime->format('Y-m-d'),
+        $checkInTime->format('H:i:s'),
+        $checkOutTime?->format('Y-m-d') ?? '',
+        $checkOutTime?->format('H:i:s') ?? '',
+        $durationMinutes ?? '',
+        $durationHours ?? '',
+        $status,
+        $checkInTime->format('l'),
+        $checkInTime->format('F'),
+        $checkInTime->format('Y')
+    ];
+}
 
     public function styles(Worksheet $sheet)
     {

@@ -9,9 +9,9 @@ use App\Models\Trainer;
 use App\Models\GymClass;
 use App\Models\Equipment;
 use App\Models\Attendance;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\MembershipType;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceVerification;
 use Spatie\Activitylog\Models\Activity;
@@ -20,20 +20,21 @@ class AdminDashboardController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:Admin']);
+        
+        $this->middleware(['auth']);
+        $this->middleware('permission:dashboard-admin', ['only' => ['index']]);
     }
-
     public function index()
     {
         $stats = $this->getBasicStats();
-        $recentActivities = $this->getRecentActivities();
+        //$recentActivities = $this->getRecentActivities();
         $upcomingClasses = $this->getUpcomingClasses();
         $equipmentStatus = $this->getEquipmentStatus();
         $flaggedAttendances = $this->getFlaggedAttendances()['data'] ?? [];
 
         return view('backend.admin.dashboard', compact(
             'stats',
-            'recentActivities',
+            //'recentActivities',
             'upcomingClasses',
             'equipmentStatus',
             'flaggedAttendances'
@@ -262,24 +263,24 @@ class AdminDashboardController extends Controller
         ];
     }
 
-    private function getRecentActivities()
-    {
-        return Activity::with(['causer'])
-            ->latest()
-            ->limit(10)
-            ->get()
-            ->map(function ($log) {
-                return [
-                    'id' => $log->id,
-                    'description' => $log->description,
-                    'subject_type' => $log->subject_type,
-                    'subject_id' => $log->subject_id,
-                    'causer_name' => $log->causer ? $log->causer->name : 'System',
-                    'created_at' => $log->created_at->diffForHumans(),
-                    'event' => $log->event ?? 'updated'
-                ];
-            });
-    }
+    // private function getRecentActivities()
+    // {
+    //     return Activity::with(['causer'])
+    //         ->latest()
+    //         ->limit(10)
+    //         ->get()
+    //         ->map(function ($log) {
+    //             return [
+    //                 'id' => $log->id,
+    //                 'description' => $log->description,
+    //                 'subject_type' => $log->subject_type,
+    //                 'subject_id' => $log->subject_id,
+    //                 'causer_name' => $log->causer ? $log->causer->name : 'System',
+    //                 'created_at' => $log->created_at->diffForHumans(),
+    //                 'event' => $log->event ?? 'updated'
+    //             ];
+    //         });
+    // }
 
     private function getUpcomingClasses()
     {
