@@ -573,28 +573,34 @@ class MemberController extends Controller
             return redirect()->route('member.profile.create');
         }
 
-        // Check if class is active
         if (!$class->is_active) {
             return redirect()->route('member.classes')->with('error', 'This class is not available.');
         }
 
-        // Get next class date
-        $nextClassDate = $this->calculateNextClassDate($class);
+        // Ensure nextClassDate is a Carbon instance
+        $nextClassDate = \Carbon\Carbon::parse($this->calculateNextClassDate($class));
 
-        // Check if already enrolled for this date
         $alreadyEnrolled = $member->classRegistrations()
             ->where('class_id', $class->id)
-            ->where('class_date', $nextClassDate)
+            ->where('class_date', $nextClassDate->format('Y-m-d'))
             ->whereIn('status', ['registered', 'attended'])
             ->exists();
 
-            $relatedClasses = GymClass::where('class_type', $class->class_type)
+        $relatedClasses = GymClass::where('class_type', $class->class_type)
             ->where('id', '!=', $class->id)
             ->active()
             ->limit(3)
             ->get();
 
-        return view('frontend.member.class-details', compact('class', 'nextClassDate', 'alreadyEnrolled','relatedClasses'));
+        $paymentMethods = PaymentMethod::where('is_active', true)->get();
+
+        return view('frontend.member.class-details', compact(
+            'class', 
+            'nextClassDate', 
+            'alreadyEnrolled', 
+            'relatedClasses',
+            'paymentMethods'
+        ));
     }
 
     /**

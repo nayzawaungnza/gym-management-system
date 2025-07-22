@@ -120,19 +120,15 @@
                                 Already Enrolled
                             </span>
                         @else
-                            <form action="{{ route('member.classes.enroll', $class) }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="class_date" value="{{ \Carbon\Carbon::parse($nextClassDate)->format('Y-m-d') }}">
-                                <button type="submit" 
-                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition duration-150 ease-in-out"
-                                    @if($class->isFull()) disabled @endif>
-                                    @if($class->isFull())
-                                        Class Full
-                                    @else
-                                        Enroll Now
-                                    @endif
-                                </button>
-                            </form>
+                            <button onclick="showEnrollModal('{{ $class->id }}', '{{ $class->class_name }}', {{ $class->price }})" 
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition duration-150 ease-in-out"
+                                @if($class->isFull()) disabled @endif>
+                                @if($class->isFull())
+                                    Class Full
+                                @else
+                                    Enroll Now
+                                @endif
+                            </button>
                         @endif
                     </div>
                 </div>
@@ -207,4 +203,147 @@
         </div>
     </div>
 </div>
+
+<!-- Enrollment Modal -->
+<div id="enrollModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- This element is to trick the browser into centering the modal contents -->
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        
+        <div class="inline-block align-bottom bg-white rounded-lg shadow-xl text-left overflow-hidden transform sm:my-8 sm:align-middle sm:max-w-md w-full">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Enroll in Class</h3>
+                    <button onclick="closeEnrollModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-gray-600">You are enrolling in:</p>
+                    <p class="font-semibold text-gray-900" id="modalClassName"></p>
+                    <p class="text-blue-600 font-bold text-lg" id="modalClassPrice"></p>
+                    <p class="text-sm text-gray-500 mt-1">Class Date: {{ \Carbon\Carbon::parse($nextClassDate)->format('l, F j, Y') }}</p>
+                </div>
+
+                <div class="mb-6 max-h-[60vh] overflow-y-auto">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Payment Method <span class="text-red-500">*</span></label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 sm:grid-cols-2 gap-2">
+                        @foreach($paymentMethods as $paymentMethod)
+                            <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="radio" name="payment_method" value="{{ $paymentMethod->id }}" class="mr-3 text-blue-600 focus:ring-blue-500">
+                                <div class="flex items-center">
+                                    @if($paymentMethod->payment_logo)
+                                        <img src="{{ url($paymentMethod->payment_logo) }}" alt="{{ $paymentMethod->display_name }}" class="h-6 w-6 mr-3">
+                                    @else
+                                        <div class="h-6 w-6 bg-gray-300 rounded mr-3 flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                            </svg>
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ $paymentMethod->display_name }}</p>
+                                        <p class="text-sm text-gray-500">{{ $paymentMethod->method_name }}</p>
+                                    </div>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="flex space-x-3">
+                    <button onclick="closeEnrollModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button onclick="confirmEnrollment()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Confirm Enrollment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentClassId = null;
+let originalBodyOverflow = '';
+
+function showEnrollModal(classId, className, price) {
+    currentClassId = classId;
+    document.getElementById('modalClassName').textContent = className;
+    document.getElementById('modalClassPrice').textContent = price > 0 ? '$' + price : 'Free';
+
+    // Store original body overflow value and disable scrolling
+    originalBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    document.getElementById('enrollModal').classList.remove('hidden');
+    
+    // Clear any previously selected payment method
+    document.querySelectorAll('input[name="payment_method"]').forEach(input => {
+        input.checked = false;
+    });
+}
+
+function closeEnrollModal() {
+    document.getElementById('enrollModal').classList.add('hidden');
+    document.body.style.overflow = originalBodyOverflow;
+    currentClassId = null;
+}
+
+function confirmEnrollment() {
+    const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked');
+    
+    if (!selectedPaymentMethod) {
+        alert('Please select a payment method.');
+        return;
+    }
+
+    const paymentMethodId = selectedPaymentMethod.value;
+
+    fetch('/classes/' + currentClassId + '/enroll', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            payment_method_id: paymentMethodId,
+            class_date: '{{ $nextClassDate->format('Y-m-d') }}'
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.error || 'Enrollment failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.error || 'Enrollment failed. Please try again.');
+    })
+    .finally(() => {
+        closeEnrollModal();
+    });
+}
+
+// Close modal when clicking outside
+document.getElementById('enrollModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEnrollModal();
+    }
+});
+</script>
 @endsection
