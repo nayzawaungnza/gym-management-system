@@ -70,7 +70,7 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
         Route::post('/classes/{class}/enroll', [App\Http\Controllers\Frontend\MemberController::class, 'enrollClass'])->name('classes.enroll');
         Route::delete('/classes/{registration}/cancel', [App\Http\Controllers\Frontend\MemberController::class, 'cancelClass'])->name('classes.cancel');
         Route::get('/my-classes', [App\Http\Controllers\Frontend\MemberController::class, 'myClasses'])->name('my-classes');
-        
+        Route::get('classes/{class}', [App\Http\Controllers\Frontend\MemberController::class, 'classDetails'])->name('classes.details');
         // Attendance
         Route::get('/attendances', [App\Http\Controllers\Frontend\MemberController::class, 'attendance'])->name('attendance');
     });

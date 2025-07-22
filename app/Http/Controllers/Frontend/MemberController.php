@@ -551,7 +551,7 @@ class MemberController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => $shouldRefund ? 'Cancelled with refund' : 'Registration cancelled'
+                'message' => $shouldRefund ? 'Successful! Cancelled with refund' : 'Registration cancelled'
             ]);
 
         } catch (\Exception $e) {
@@ -563,6 +563,38 @@ class MemberController extends Controller
             ]);
             return response()->json(['error' => 'Cancellation failed'], 500);
         }
+    }
+    public function classDetails(GymClass $class)
+    {
+        $user = Auth::user();
+        $member = $user->member;
+
+        if (!$member) {
+            return redirect()->route('member.profile.create');
+        }
+
+        // Check if class is active
+        if (!$class->is_active) {
+            return redirect()->route('member.classes')->with('error', 'This class is not available.');
+        }
+
+        // Get next class date
+        $nextClassDate = $this->calculateNextClassDate($class);
+
+        // Check if already enrolled for this date
+        $alreadyEnrolled = $member->classRegistrations()
+            ->where('class_id', $class->id)
+            ->where('class_date', $nextClassDate)
+            ->whereIn('status', ['registered', 'attended'])
+            ->exists();
+
+            $relatedClasses = GymClass::where('class_type', $class->class_type)
+            ->where('id', '!=', $class->id)
+            ->active()
+            ->limit(3)
+            ->get();
+
+        return view('frontend.member.class-details', compact('class', 'nextClassDate', 'alreadyEnrolled','relatedClasses'));
     }
 
     /**

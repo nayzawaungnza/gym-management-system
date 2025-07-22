@@ -125,7 +125,7 @@
 <script>
     function cancelClass(registrationId, className) {
         if (confirm(`Are you sure you want to cancel your registration for "${className}"?`)) {
-            fetch(`/member/classes/${registrationId}/cancel`, {
+            fetch(`/classes/${registrationId}/cancel`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
