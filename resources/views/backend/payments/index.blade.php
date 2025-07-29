@@ -114,7 +114,7 @@
                             <td>
                                 <a href="{{ route('payments.show', $payment->id) }}">{{ $payment->member?->full_name ?? 'N/A' }}</a>
                             </td>
-                            <td>{{ $payment->membershipType?->type_name ?? 'N/A' }}</td>
+                            <td>{{ $payment->memberSubscription?->membershipType?->type_name ?? 'N/A' }}</td>
                             <td>{{ $payment->classRegistration?->gymClass?->class_name ?? 'N/A' }}</td>
                             <td>{{ '$' . number_format($payment->amount, 2) }}</td>
                             <td><span><img src="{{ asset('' . $payment->paymentMethod->payment_logo) }}" alt="{{ $payment->paymentMethod->display_name }}" class="me-50 thumbnail mr-1" height="20" </span><span>{{ $payment->paymentMethod->display_name ?? 'N/A' }}</span></td>
