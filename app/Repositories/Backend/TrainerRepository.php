@@ -47,6 +47,12 @@ class TrainerRepository extends BaseRepository
 
     public function createTrainer(array $data)
     {
+        $path = "trainers";
+        if (isset($data['profile_photo'])) {
+            $data['profile_photo'] = $this->uploadFile($data['profile_photo'], $path);
+        } else {
+            $data['profile_photo'] = null;
+        }
         $trainer = Trainer::create([
             'trainer_id' => $data['trainer_id'],
             'name' => $data['name'],
@@ -55,8 +61,11 @@ class TrainerRepository extends BaseRepository
             'specializations' => $data['specializations'] ?? null,
             'certifications' => $data['certifications'] ?? null,
             'hourly_rate' => $data['hourly_rate'] ?? 50,
-            'status' => $data['status'] ?? 'active',
             'hire_date' => $data['hire_date'],
+            'bio' => $data['bio'] ?? null,
+            'profile_photo' => $data['profile_photo'],
+            'is_active' => $data['is_active'] ?? true,
+            'user_id' => $data['user_id'] ?? null,
         ]);
 
         // Save activity log
@@ -111,4 +120,25 @@ class TrainerRepository extends BaseRepository
 
         return $query->paginate($request->input('per_page', 25));
     }
+
+    private function uploadFile($file, $path)
+    {
+        if ($file && $file->isValid()) {
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file_name = Storage::disk('public')->putFileAs($path, $file, $filename);
+            if ($file_name) {
+                return $file_name;
+            }
+            
+        }
+        return null;
+    }
+    private function deleteFile($filePath)
+    {
+        if ($filePath && Storage::disk('public')->exists($filePath)) {
+            return Storage::disk('public')->delete($filePath);
+        }
+        return false;
+    }
+    
 }

@@ -67,6 +67,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         @csrf
                         <div class="row">
                             <div class="mb-3 col-md-6">
+                                <label for="user_id" class="form-label">Trainer ID *</label>
+                                <select class="form-select @error('user_id') is-invalid @enderror" 
+                                        id="user_id" name="user_id" required>
+                                    <option value="">Select Trainer ID</option>
+                                    @foreach($users as $user)
+                                        <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>{{ $user->full_name }}</option>
+                                    @endforeach
+                                </select>
+                                
+                                @error('user_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
                                 <label for="first_name" class="form-label">First Name *</label>
                                 <input type="text" class="form-control @error('first_name') is-invalid @enderror" 
                                        id="first_name" name="first_name" value="{{ old('first_name') }}" required>

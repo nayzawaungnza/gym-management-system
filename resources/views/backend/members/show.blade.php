@@ -42,7 +42,9 @@
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Date of Birth</label>
-                                    <p class="form-control-static">{{ $member->date_of_birth->format('M d, Y') }} (Age: {{ $member->date_of_birth->age }})</p>
+                                    <p class="form-control-static">
+                                        {{ $member->date_of_birth?->format('M d, Y') }} (Age: {{ $member->date_of_birth?->age }})
+                                    </p>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Gender</label>
@@ -89,9 +91,9 @@
                                     <label class="form-label">Medical Conditions</label>
                                     <div class="border p-3 rounded">
                                         <ul>
-                                            @foreach(json_decode($member->medical_conditions, true) as $condition)
-                                                <li>{{ $condition }}</li>
-                                            @endforeach
+                                             @foreach($member->medical_conditions as $condition)
+                                                    <li>{{ $condition }}</li>
+                                                @endforeach
                                         </ul>
                                     </div>
                                 </div>
@@ -101,7 +103,7 @@
                                     <label class="form-label">Fitness Goals</label>
                                     <div class="border p-3 rounded">
                                         <ul>
-                                            @foreach(json_decode($member->fitness_goals, true) as $goal)
+                                            @foreach($member->fitness_goals as $goal)
                                                 <li>{{ $goal }}</li>
                                             @endforeach
                                         </ul>
@@ -216,7 +218,7 @@
                                     <tr>
                                         <td>{{ $payment->payment_date->format('M d, Y') }}</td>
                                         <td>${{ number_format($payment->amount, 2) }}</td>
-                                        <td>{{ ucfirst($payment->payment_method) }}</td>
+                                        <td><span><img src="{{ asset('' . $payment->paymentMethod->payment_logo) }}" alt="{{ $payment->paymentMethod->display_name }}" class="me-50 thumbnail mr-1" height="20" </span><span>{{ $payment->paymentMethod->display_name ?? 'N/A' }}</span></td>
                                         <td>
                                             <span class="badge bg-{{ $payment->status === 'completed' ? 'success' : ($payment->status === 'pending' ? 'warning' : 'danger') }}">
                                                 {{ ucfirst($payment->status) }}

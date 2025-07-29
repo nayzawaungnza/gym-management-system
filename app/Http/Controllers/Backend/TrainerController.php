@@ -74,7 +74,8 @@ class TrainerController extends Controller
 
     public function create()
     {
-        return view('backend.trainers.create');
+        $users = User::where('is_admin', 2)->get();
+        return view('backend.trainers.create', compact('users'));
     }
 
     public function store(Request $request)
@@ -87,6 +88,9 @@ class TrainerController extends Controller
             'specialization' => 'nullable|string|max:100',
             'certifications' => 'nullable|array',
             'certifications.*' => 'string|max:255',
+            'hourly_rate' => 'nullable|numeric',
+            'bio' => 'nullable|string',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'hire_date' => 'required|date',
             'is_active' => 'boolean'
         ]);
@@ -129,7 +133,10 @@ class TrainerController extends Controller
             'certifications' => 'nullable|array',
             'certifications.*' => 'string|max:255',
             'hire_date' => 'required|date',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'hourly_rate' => 'nullable|numeric',
+            'bio' => 'nullable|string',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
 
         $this->trainerService->updateTrainer($trainer, $request->all());
