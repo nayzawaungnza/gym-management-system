@@ -76,13 +76,13 @@ class RoleController extends Controller
                                 <i class="fas fa-eye"></i>
                                 <div class="ripple-container"></div>
                             </a></div>';
-                    $btn = $btn . '<div class="my-1 text-center"><form action="' . route('roles.destroy', $row->id) . '" method="POST" id="del-role-' . $row->id . '" class="d-inline">
-                                <input type="hidden" name="_token" value="' . csrf_token() . '">
-                                <input type="hidden" name="_method" value="DELETE">
-                                <button type="button" class="button-size btn btn-sm btn-danger destroy_btn" data-original-title="" data-origin="del-role-' . $row->id . '" title="Delete">
-                                <i class="fas fa-trash"></i>
-                                </button>                                                    
-                                </form></div>';
+                    // $btn = $btn . '<div class="my-1 text-center"><form action="' . route('roles.destroy', $row->id) . '" method="POST" id="del-role-' . $row->id . '" class="d-inline">
+                    //             <input type="hidden" name="_token" value="' . csrf_token() . '">
+                    //             <input type="hidden" name="_method" value="DELETE">
+                    //             <button type="button" class="button-size btn btn-sm btn-danger destroy_btn" data-original-title="" data-origin="del-role-' . $row->id . '" title="Delete">
+                    //             <i class="fas fa-trash"></i>
+                    //             </button>                                                    
+                    //             </form></div>';
                     $btn = $btn . '</div>';
                     return $btn;
                 })

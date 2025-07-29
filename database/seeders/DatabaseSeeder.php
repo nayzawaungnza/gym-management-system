@@ -16,15 +16,18 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         $this->call([
+            // Core system setup first
             RolePermissionSeeder::class,
             MembershipTypeSeeder::class,
-            //RoleSeeder::class,
-            //UserSeeder::class,
-            //MemberSeeder::class,
+            PaymentMethodTableSeeder::class,
+            
+            // Then create users
+            UserSeeder::class,
+            
+            // Then create dependent records
             TrainerSeeder::class,
-            //EquipmentSeeder::class,
+            MemberSeeder::class,
             GymClassSeeder::class,
-            PaymentMethodTableSeeder::class
         ]);
     }
 }

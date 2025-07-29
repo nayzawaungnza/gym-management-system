@@ -29,12 +29,25 @@
         <div data-i18n="Classes">Classes</div>
     </a>
 </li>
+<!-- Membership Types -->
+<li class="menu-item {{ $activePage == 'membershiptypes' ? 'active' : '' }}">
+    <a href="{{ route('membershiptypes.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons ti ti-tag"></i>
+        <div data-i18n="Membership">Membership Types</div>
+    </a>
+</li>
 
 <!-- Payments -->
 <li class="menu-item {{ $activePage == 'payments' ? 'active' : '' }}">
     <a href="{{ route('payments.index') }}" class="menu-link">
         <i class="menu-icon tf-icons ti ti-credit-card"></i>
-        <div data-i18n="Payments">Payments</div>
+        <div data-i18n="Payments">Payments Transaction</div>
+    </a>
+</li>
+<li class="menu-item {{ $activePage == 'paymentmethods' ? 'active' : '' }}">
+    <a href="{{ route('paymentmethods.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons ti ti-credit-card"></i>
+        <div data-i18n="Payment Methods">Payment Methods</div>
     </a>
 </li>
 

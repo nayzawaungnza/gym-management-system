@@ -13,83 +13,80 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Admin User
-        $admin = User::updateOrCreate(
-            ['email' => 'systemadmin@gym.com'],
+        // System Users
+        $systemUsers = [
             [
                 'name' => 'System Administrator',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_admin' => 1,
-                'is_active' => true,
-            ]
-        );
-        $admin->assignRole('admin');
-
-        // Create Manager User
-        $manager = User::updateOrCreate(
-            ['email' => 'mansddager@gym.com'],
+                'email' => 'admin@gym.com',
+                'password' => 'password',
+                'role' => 'Admin',
+                'is_admin' => 1
+            ],
             [
                 'name' => 'Gym Manager',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_admin' => 1,
-                'is_active' => true,
-            ]
-        );
-        $manager->assignRole('manager');
-
-        // Create Trainer User
-        $trainer = User::updateOrCreate(
-            ['email' => 'trainsdder@gym.com'],
-            [
-                'name' => 'John Trainer',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_admin' => 2,
-                'is_active' => true,
-            ]
-        );
-        $trainer->assignRole('trainer');
-
-        // Create Member User
-        $member = User::updateOrCreate(
-            ['email' => 'membesddr@gym.com'],
-            [
-                'name' => 'Jane Member',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_admin' => 0,
-                'is_active' => true,
-            ]
-        );
-        $member->assignRole('member');
-
-        // Additional sample users
-        $users = [
-            [
-                'name' => 'Sarah Johnson',
-                'email' => 'sarsdsdah@example.com',
-                'role' => 'member'
+                'email' => 'manager@gym.com',
+                'password' => 'password',
+                'role' => 'Admin',
+                'is_admin' => 1
             ],
             [
-                'name' => 'Mike Wilson',
-                'email' => 'mikdfssde@example.com',
-                'role' => 'trainer'
+                'name' => 'Head Trainer',
+                'email' => 'trainer@gym.com',
+                'password' => 'password',
+                'role' => 'Trainer',
+                'is_admin' => 2
             ],
             [
-                'name' => 'Lisa Brown',
-                'email' => 'liscasaa@example.com',
-                'role' => 'member'
+                'name' => 'Sample Member',
+                'email' => 'member@gym.com',
+                'password' => 'password',
+                'role' => 'Member',
+                'is_admin' => 0
             ],
         ];
 
-        foreach ($users as $userData) {
+        foreach ($systemUsers as $userData) {
             $user = User::updateOrCreate(
                 ['email' => $userData['email']],
                 [
                     'name' => $userData['name'],
-                    'password' => Hash::make('password'),
+                    'password' => Hash::make($userData['password']),
+                    'email_verified_at' => now(),
+                    'is_admin' => $userData['is_admin'],
+                    'is_active' => true,
+                ]
+            );
+            $user->assignRole($userData['role']);
+        }
+
+        // Additional sample users
+        $sampleUsers = [
+            [
+                'name' => 'Sarah Johnson',
+                'email' => 'sarah@example.com',
+                'password' => 'password',
+                'role' => 'member'
+            ],
+            [
+                'name' => 'Mike Wilson',
+                'email' => 'mike@example.com',
+                'password' => 'password',
+                'role' => 'trainer'
+            ],
+            [
+                'name' => 'Lisa Brown',
+                'email' => 'lisa@example.com',
+                'password' => 'password',
+                'role' => 'member'
+            ],
+        ];
+
+        foreach ($sampleUsers as $userData) {
+            $user = User::updateOrCreate(
+                ['email' => $userData['email']],
+                [
+                    'name' => $userData['name'],
+                    'password' => Hash::make($userData['password']),
                     'email_verified_at' => now(),
                     'is_admin' => $userData['role'] === 'trainer' ? 2 : 0,
                     'is_active' => true,

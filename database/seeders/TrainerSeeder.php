@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Faker\Factory as Faker;
+use App\Models\User;
 
 class TrainerSeeder extends Seeder
 {
@@ -16,24 +17,30 @@ class TrainerSeeder extends Seeder
     {
         $faker = Faker::create();
         
-        // Get user IDs where is_admin = 2 (trainers)
-        $trainerUsers = DB::table('users')
-            ->where('is_admin', 2)
+        // Get existing trainer users
+        $trainerUsers = User::where('is_admin', 2)
             ->pluck('id')
             ->toArray();
 
-        // If no trainer users exist, create some
-        if (empty($trainerUsers)) {
-            for ($i = 0; $i < 5; $i++) {
-                $userId = DB::table('users')->insertGetId([
+        // Ensure we have at least 5 trainers
+        if (count($trainerUsers) < 5) {
+            $needed = 5 - count($trainerUsers);
+            for ($i = 0; $i < $needed; $i++) {
+                $user = User::create([
                     'name' => $faker->name,
                     'email' => $faker->unique()->safeEmail,
                     'password' => bcrypt('password'),
                     'is_admin' => 2,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'is_active' => true,
+                    'email_verified_at' => now(),
                 ]);
-                $trainerUsers[] = $userId;
+                
+                $trainerUsers[] = $user->id;
+                
+                // Assign trainer role if not already assigned
+                if (!$user->hasRole('Trainer')) {
+                    $user->assignRole('Trainer');
+                }
             }
         }
 
@@ -51,31 +58,50 @@ class TrainerSeeder extends Seeder
             ['name' => 'NASM Certified Personal Trainer', 'year' => 2020],
             ['name' => 'ACE Fitness Instructor', 'year' => 2019],
             ['name' => 'CrossFit Level 1', 'year' => 2021],
-            ['name' => 'Yoga Alliance RYT-200', 'year' => 2018]
+            ['name' => 'Yoga Alliance RYT-200', 'year' => 2018],
+            ['name' => 'Precision Nutrition Level 1', 'year' => 2022]
         ];
 
         foreach ($trainerUsers as $userId) {
+            $user = User::find($userId);
             $firstName = $faker->firstName;
             $lastName = $faker->lastName;
             
-            DB::table('trainers')->insert([
-                'id' => Str::uuid(),
-                'user_id' => $userId,
-                'trainer_id' => 'TR' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT),
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'email' => $faker->unique()->safeEmail,
-                'phone' => $faker->phoneNumber,
-                'specialization' => $faker->randomElement($specializations),
-                'certifications' => json_encode($faker->randomElements($certifications, rand(1, 3))),
-                'hire_date' => $faker->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
-                'hourly_rate' => $faker->randomFloat(2, 30, 100),
-                'bio' => $faker->paragraph(3),
-                'profile_photo' => $faker->imageUrl(200, 200, 'people'),
-                'is_active' => $faker->boolean(90), // 90% chance of being active
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // Check if trainer profile already exists
+            if (!$user->trainer) {
+                DB::table('trainers')->insert([
+                    'id' => Str::uuid(),
+                    'user_id' => $userId,
+                    'trainer_id' => 'TR' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT),
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $user->email,
+                    'phone' => null,
+                    'specialization' => $faker->randomElement($specializations),
+                    'certifications' => json_encode($faker->randomElements($certifications, rand(1, 3))),
+                    'hire_date' => $faker->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
+                    'hourly_rate' => $faker->randomFloat(2, 30, 100),
+                    'bio' => $faker->paragraph(3),
+                    'profile_photo' => $faker->imageUrl(200, 200, 'people'),
+                    'is_active' => $faker->boolean(90),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        $this->command->info('Trainers seeded successfully!');
+        $this->command->info('Total trainers: ' . count($trainerUsers));
+        
+        // Summary by specialization
+        $specializationCounts = DB::table('trainers')
+            ->select('specialization', DB::raw('count(*) as total'))
+            ->groupBy('specialization')
+            ->get();
+            
+        $this->command->info("\nTrainers by specialization:");
+        foreach ($specializationCounts as $spec) {
+            $this->command->info("- {$spec->specialization}: {$spec->total}");
         }
     }
 }

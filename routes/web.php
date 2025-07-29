@@ -133,6 +133,11 @@ Route::post('/email/resend-code', [App\Http\Controllers\Auth\AuthController::cla
         Route::resource('trainers', App\Http\Controllers\Backend\TrainerController::class);
         Route::post('trainers/{trainer}/change-status', [App\Http\Controllers\Backend\TrainerController::class, 'changeStatus'])->name('trainers.change-status');
         
+        Route::resource('membershiptypes', App\Http\Controllers\Backend\MembershipTypeController::class);
+    Route::post('membershiptypes/{membershiptype}/change-status', [App\Http\Controllers\Backend\MembershipTypeController::class, 'changeStatus'])->name('membershiptypes.change-status');
+
+    Route::resource('paymentmethods', App\Http\Controllers\Backend\PaymentMethodController::class);
+    Route::post('paymentmethods/{paymentmethod}/change-status', [App\Http\Controllers\Backend\PaymentMethodController::class, 'changeStatus'])->name('paymentmethods.change-status');
         // Classes Management
         Route::resource('classes', App\Http\Controllers\Backend\ClassController::class);
         Route::post('classes/{class}/cancel', [App\Http\Controllers\Backend\ClassController::class, 'cancel'])->name('classes.cancel');

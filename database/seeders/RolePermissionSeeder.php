@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\User;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -38,68 +37,47 @@ class RolePermissionSeeder extends Seeder
             'dashboard-admin', 'dashboard-trainer', 'dashboard-member',
             // Export permissions
             'export-members', 'export-attendance', 'export-payments',
+            // User permissions
             'user-list', 'user-create', 'user-edit', 'user-delete',
             // Additional permissions
-            
+            'settings-manage', 'notifications-send'
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Create Roles and assign permissions
-        $adminRole = Role::create(['name' => 'Admin']);
-        $trainerRole = Role::create(['name' => 'Trainer']);
-        $memberRole = Role::create(['name' => 'Member']);
+        // Create Roles if they don't exist
+        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
+        $trainerRole = Role::firstOrCreate(['name' => 'Trainer']);
+        $memberRole = Role::firstOrCreate(['name' => 'Member']);
 
         // Assign all permissions to Admin
-        $adminRole->givePermissionTo(Permission::all());
+        $adminRole->syncPermissions(Permission::all());
 
         // Assign specific permissions to Trainer
-        $trainerRole->givePermissionTo([
+        $trainerPermissions = [
             'class-list', 'class-edit',
             'attendance-list', 'attendance-create', 'attendance-edit',
             'member-list',
             'dashboard-trainer',
-            'report-attendance'
-        ]);
+            'report-attendance',
+            'equipment-list'
+        ];
+        $trainerRole->syncPermissions($trainerPermissions);
 
         // Assign limited permissions to Member
-        $memberRole->givePermissionTo([
+        $memberPermissions = [
             'class-list',
             'attendance-list',
-            'dashboard-member'
-        ]);
+            'dashboard-member',
+            'equipment-list'
+        ];
+        $memberRole->syncPermissions($memberPermissions);
 
-        // Create default users
-        $admin = User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@gym.com',
-            'password' => bcrypt('password'),
-            'is_admin' => 1,
-            'is_active' => true,
-            'email_verified_at' => now()
-        ]);
-        $admin->assignRole('Admin');
-
-        $trainer = User::create([
-            'name' => 'Trainer User',
-            'email' => 'trainer@gym.com',
-            'password' => bcrypt('password'),
-            'is_admin' => 2,
-            'is_active' => true,
-            'email_verified_at' => now()
-        ]);
-        $trainer->assignRole('Trainer');
-
-        $member = User::create([
-            'name' => 'Member User',
-            'email' => 'member@gym.com',
-            'password' => bcrypt('password'),
-            'is_admin' => 0,
-            'is_active' => true,
-            'email_verified_at' => now()
-        ]);
-        $member->assignRole('Member');
+        $this->command->info('Roles and permissions seeded successfully!');
+        $this->command->info('Admin permissions: ' . $adminRole->permissions->count());
+        $this->command->info('Trainer permissions: ' . count($trainerPermissions));
+        $this->command->info('Member permissions: ' . count($memberPermissions));
     }
 }
