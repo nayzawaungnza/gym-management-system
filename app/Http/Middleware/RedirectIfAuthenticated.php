@@ -31,9 +31,9 @@ class RedirectIfAuthenticated
         if (Auth::guard($guard)->check()) {
             $user = Auth::guard($guard)->user();
             
-            if (!$user->hasVerifiedEmail()) {
-                return redirect()->route('verification.notice');
-            }
+            // if (!$user->hasVerifiedEmail()) {
+            //     return redirect()->route('verification.notice');
+            // }
 
             // Clear intended URL to prevent loops
             redirect()->setIntendedUrl(null);
