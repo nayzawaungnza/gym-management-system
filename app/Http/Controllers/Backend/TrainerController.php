@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Backend;
 
-use App\Http\Controllers\Controller;
-use App\Models\Trainer;
-use App\Services\TrainerService;
-use Illuminate\Http\Request;
 use DataTables;
+use App\Models\User;
+use App\Models\Trainer;
+use Illuminate\Http\Request;
+use App\Services\TrainerService; // Use the service
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Trainer\CreateTrainerRequest; // Assuming you'll create these
+use App\Http\Requests\Trainer\UpdateTrainerRequest; // Assuming you'll create these
 
 class TrainerController extends Controller
 {
@@ -23,79 +26,64 @@ class TrainerController extends Controller
     }
 
     public function index(Request $request)
-{
-    if ($request->ajax()) {
-        $trainers = $this->trainerService->getTrainerElouent($request->all());
-        return DataTables::eloquent($trainers)
-            ->addIndexColumn()
-            ->addColumn('full_name', function ($trainer) {
-                return $trainer->full_name;
-            })
-            ->addColumn('hire_date_formatted', function ($trainer) {
-                return $trainer->hire_date->format('Y-m-d H:i:s');
-            })
-            ->addColumn('status_badge', function ($trainer) {
-                $badgeClass = $trainer->is_active ? 'success' : 'secondary';
-                $status = $trainer->is_active ? 'Active' : 'Inactive';
-                return '<span class="badge bg-' . $badgeClass . '">' . $status . '</span>';
-            })
-            ->addColumn('classes_count', function ($trainer) {
-                return $trainer->classes()->count();
-            })
-            ->addColumn('action', function ($trainer) {
-                $btn = '<div class=" m-sm-n1">';
-                $btn .= '<div class="my-1 text-center"><a rel="tooltip" class="button-size btn btn-sm btn-success" href="' . route('trainers.edit', $trainer->id) . '"
-                            data-original-title="" title="Edit">
-                            <i class="fas fa-edit"></i>
-                            <div class="ripple-container"></div>
+    {
+        if ($request->ajax()) {
+            $trainers = $this->trainerService->getTrainerEloquent($request->all()); // Corrected typo
+            return DataTables::eloquent($trainers)
+                ->addIndexColumn()
+                ->addColumn('full_name', function ($trainer) {
+                    return $trainer->full_name;
+                })
+                ->addColumn('hire_date_formatted', function ($trainer) {
+                    return $trainer->hire_date ? $trainer->hire_date->format('Y-m-d H:i:s') : 'N/A'; // Handle null hire_date
+                })
+                ->addColumn('status_badge', function ($trainer) {
+                    $badgeClass = $trainer->is_active ? 'success' : 'secondary';
+                    $status = $trainer->is_active ? 'Active' : 'Inactive';
+                    return '<span class="badge bg-' . $badgeClass . '">' . $status . '</span>';
+                })
+                ->addColumn('classes_count', function ($trainer) {
+                    return $trainer->classes()->count();
+                })
+                ->addColumn('action', function ($trainer) {
+                    $btn = '<div class=" m-sm-n1">';
+                    $btn .= '<div class="my-1 text-center"><a rel="tooltip" class="button-size btn btn-sm btn-success" href="' . route('trainers.edit', $trainer->id) . '"
+                                data-original-title="" title="Edit">
+                                <i class="fas fa-edit"></i>
+                                <div class="ripple-container"></div>
+                                </a></div>';
+                    $btn .= '<div class="my-1 text-center"><a rel="tooltip" class="button-size btn btn-sm btn-primary" href="' . route('trainers.show', $trainer->id) . '"
+                                data-original-title="" title="Show">
+                                <i class="fas fa-eye"></i>
+                                <div class="ripple-container"></div>
                             </a></div>';
-                $btn .= '<div class="my-1 text-center"><a rel="tooltip" class="button-size btn btn-sm btn-primary" href="' . route('trainers.show', $trainer->id) . '"
-                            data-original-title="" title="Show">
-                            <i class="fas fa-eye"></i>
-                            <div class="ripple-container"></div>
-                        </a></div>';
-                if (auth()->user()->can('trainer-delete')) {
-                    $btn .= '<div class="my-1 text-center"><form action="' . route('trainers.destroy', $trainer->id) . '" method="POST" id="del-trainer-' . $trainer->id . '" class="d-inline">
-                                <input type="hidden" name="_token" value="' . csrf_token() . '">
-                                <input type="hidden" name="_method" value="DELETE">
-                                <button type="button" class="button-size btn btn-sm btn-danger destroy_btn" data-original-title="" data-origin="del-trainer-' . $trainer->id . '" title="Delete">
-                                <i class="fas fa-trash"></i>
-                                </button>                                                    
-                                </form></div>';
-                }
-                $btn .= '</div>';
-                return $btn;
-            })
-            ->rawColumns(['status_badge', 'action'])
-            ->make(true);
+                    if (auth()->user()->can('trainer-delete')) {
+                        $btn .= '<div class="my-1 text-center"><form action="' . route('trainers.destroy', $trainer->id) . '" method="POST" id="del-trainer-' . $trainer->id . '" class="d-inline">
+                                    <input type="hidden" name="_token" value="' . csrf_token() . '">
+                                    <input type="hidden" name="_method" value="DELETE">
+                                    <button type="button" class="button-size btn btn-sm btn-danger destroy_btn" data-original-title="" data-origin="del-trainer-' . $trainer->id . '" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                    </button>                                                    
+                                    </form></div>';
+                    }
+                    $btn .= '</div>';
+                    return $btn;
+                })
+                ->rawColumns(['status_badge', 'action'])
+                ->make(true);
+        }
+        return view('backend.trainers.index');
     }
-    return view('backend.trainers.index');
-}
 
     public function create()
     {
-        $users = User::where('is_admin', 2)->get();
-        return view('backend.trainers.create', compact('users'));
+        // No need to fetch users here, as we're creating a new user implicitly
+        return view('backend.trainers.create');
     }
 
-    public function store(Request $request)
+    public function store(CreateTrainerRequest $request) // Use form request for validation
     {
-        $request->validate([
-            'first_name' => 'required|string|max:50',
-            'last_name' => 'required|string|max:50',
-            'email' => 'required|email|unique:trainers,email',
-            'phone' => 'nullable|string|max:15',
-            'specialization' => 'nullable|string|max:100',
-            'certifications' => 'nullable|array',
-            'certifications.*' => 'string|max:255',
-            'hourly_rate' => 'nullable|numeric',
-            'bio' => 'nullable|string',
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'hire_date' => 'required|date',
-            'is_active' => 'boolean'
-        ]);
-
-        $this->trainerService->createTrainer($request->all());
+        $this->trainerService->createTrainerAndUser($request->validated());
 
         return redirect()->route('trainers.index')
             ->with('success', 'Trainer created successfully.');
@@ -122,24 +110,9 @@ class TrainerController extends Controller
         return view('backend.trainers.edit', compact('trainer'));
     }
 
-    public function update(Request $request, Trainer $trainer)
+    public function update(UpdateTrainerRequest $request, Trainer $trainer) // Use form request for validation
     {
-        $request->validate([
-            'first_name' => 'required|string|max:50',
-            'last_name' => 'required|string|max:50',
-            'email' => 'required|email|unique:trainers,email,' . $trainer->id,
-            'phone' => 'nullable|string|max:15',
-            'specialization' => 'nullable|string|max:100',
-            'certifications' => 'nullable|array',
-            'certifications.*' => 'string|max:255',
-            'hire_date' => 'required|date',
-            'is_active' => 'boolean',
-            'hourly_rate' => 'nullable|numeric',
-            'bio' => 'nullable|string',
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
-        ]);
-
-        $this->trainerService->updateTrainer($trainer, $request->all());
+        $this->trainerService->updateTrainer($trainer, $request->validated());
 
         return redirect()->route('trainers.index')
             ->with('success', 'Trainer updated successfully.');

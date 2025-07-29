@@ -6,160 +6,29 @@ use App\Models\Trainer;
 use App\Models\GymClass;
 use App\Models\ClassRegistration;
 use App\Repositories\Backend\TrainerRepository;
-use App\Repositories\Backend\UserRepository; // Import UserRepository
 use App\Services\Interfaces\TrainerServiceInterface;
+use App\Helpers\ActivityLogHelper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection; // Import Collection
 
 class TrainerService implements TrainerServiceInterface
 {
     protected $trainerRepository;
-    protected $userRepository; // Declare UserRepository
 
-    public function __construct(TrainerRepository $trainerRepository, UserRepository $userRepository) // Inject UserRepository
+    public function __construct(TrainerRepository $trainerRepository)
     {
         $this->trainerRepository = $trainerRepository;
-        $this->userRepository = $userRepository;
     }
 
-    public function getTrainerEloquent(array $filters = []) // Corrected typo and added filters
+    public function getTrainerElouent()
     {
-        return $this->trainerRepository->getTrainerEloquent($filters);
+        return $this->trainerRepository->getTrainerElouent();
     }
 
-    public function createTrainerAndUser(array $data): Trainer
-    {
-        DB::beginTransaction();
-        try {
-            // Prepare user data
-            $userData = [
-                'name' => $data['first_name'] . ' ' . $data['last_name'], // Combine first and last name for User model
-                'email' => $data['email'],
-                'password' => $data['password'],
-                'phone' => $data['phone'] ?? null,
-                'is_active' => $data['is_active'] ?? true,
-                'profile_photo' => $data['profile_photo'] ?? null,
-                'role' => 'Trainer', // Explicitly set role for user creation
-            ];
-
-            // Create the User record via UserRepository
-            $user = $this->userRepository->create($userData);
-
-            // Prepare trainer data
-            $trainerData = array_merge($data, [
-                'user_id' => $user->id,
-                'trainer_id' => 'TRN-' . uniqid(), // Generate unique trainer ID
-                'profile_photo' => $user->profile_photo, // Use the photo path from the user
-                'is_active' => $user->is_active,
-            ]);
-
-            // Create the Trainer record via TrainerRepository
-            $trainer = $this->trainerRepository->createTrainer($trainerData);
-
-            DB::commit();
-            return $trainer;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to create trainer and user: ' . $e->getMessage(), ['data' => $data, 'exception' => $e]);
-            throw $e;
-        }
-    }
-
-    public function updateTrainer(Trainer $trainer, array $data): Trainer
-    {
-        DB::beginTransaction();
-        try {
-            // Update Trainer record
-            $updatedTrainer = $this->trainerRepository->updateTrainer($trainer, $data);
-
-            // Update associated User record
-            $user = $trainer->user;
-            if ($user) {
-                $userData = [
-                    'name' => $data['first_name'] . ' ' . $data['last_name'],
-                    'email' => $data['email'],
-                    'phone' => $data['phone'] ?? null,
-                    'is_active' => $data['is_active'] ?? $user->is_active,
-                ];
-                // Only update password if provided
-                if (isset($data['password']) && !empty($data['password'])) {
-                    $userData['password'] = $data['password'];
-                }
-                // Profile photo is handled by TrainerRepository, which updates the User's profile_photo too.
-                // No need to pass profile_photo to userRepository->update here if TrainerRepository handles it.
-
-                $this->userRepository->update($user, $userData);
-            }
-
-            DB::commit();
-            return $updatedTrainer;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating trainer: ' . $e->getMessage(), ['trainer_id' => $trainer->id, 'data' => $data, 'exception' => $e]);
-            throw $e;
-        }
-    }
-
-    public function deleteTrainer(Trainer $trainer): bool
-    {
-        DB::beginTransaction();
-        try {
-            // Check if trainer has active classes
-            $activeClasses = $trainer->classes()->upcoming()->count();
-            
-            if ($activeClasses > 0) {
-                throw new \Exception('Cannot delete trainer with active classes. Please reassign or cancel classes first.');
-            }
-
-            // Delegate deletion to repository, which handles trainer record and photo
-            $deleted = $this->trainerRepository->deleteTrainer($trainer);
-
-            // Handle associated user role/status
-            $user = $trainer->user;
-            if ($deleted && $user) {
-                $user->removeRole('Trainer');
-                if (!$user->hasAnyRole(['Admin', 'Trainer'])) {
-                    $user->is_admin = 0; // Member
-                }
-                $user->save();
-            }
-
-            DB::commit();
-            return $deleted;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error deleting trainer: ' . $e->getMessage(), ['trainer_id' => $trainer->id, 'exception' => $e]);
-            throw $e;
-        }
-    }
-
-    public function changeStatus(Trainer $trainer): Trainer
-    {
-        DB::beginTransaction();
-        try {
-            $updatedTrainer = $this->trainerRepository->changeStatus($trainer);
-
-            // Also update the associated User's status
-            $user = $trainer->user;
-            if ($user) {
-                $user->is_active = $updatedTrainer->is_active;
-                $user->save(); // Save the user status change
-            }
-
-            DB::commit();
-            return $updatedTrainer;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error changing trainer status: ' . $e->getMessage(), ['trainer_id' => $trainer->id, 'exception' => $e]);
-            throw $e;
-        }
-    }
-
-    public function getAllTrainers(array $filters = []): Collection
+    public function getAllTrainers($filters = [])
     {
         try {
             return $this->trainerRepository->getAllTrainers($filters);
@@ -169,13 +38,12 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getTrainerById(string $id): ?Trainer
+    public function getTrainerById($id)
     {
         try {
             $trainer = $this->trainerRepository->getTrainerById($id);
             if (!$trainer) {
-                // No need to throw exception if it's nullable, just return null
-                return null;
+                throw new \Exception('Trainer not found');
             }
             return $trainer;
         } catch (\Exception $e) {
@@ -184,12 +52,116 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getPaginatedTrainers(Request $request): LengthAwarePaginator
+    public function createTrainer(array $data): Trainer
     {
-        return $this->trainerRepository->getPaginatedTrainers($request);
+        DB::beginTransaction();
+        try {
+            // Generate unique trainer ID
+            $data['trainer_id'] = $this->generateTrainerId();
+            
+            // Set default values
+            $data['status'] = $data['status'] ?? 'active';
+            $data['hire_date'] = $data['hire_date'] ?? now();
+            
+            // Handle specializations as JSON
+            if (isset($data['specializations']) && is_array($data['specializations'])) {
+                $data['specializations'] = json_encode($data['specializations']);
+            }
+            
+            // Handle certifications as JSON
+            if (isset($data['certifications']) && is_array($data['certifications'])) {
+                $data['certifications'] = json_encode($data['certifications']);
+            }
+
+            $trainer = $this->trainerRepository->createTrainer($data);
+
+            // Log activity
+            ActivityLogHelper::log(
+                'trainer',
+                'created',
+                "Trainer {$trainer->name} created",
+                $trainer->id
+            );
+
+            DB::commit();
+            return $trainer;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating trainer: ' . $e->getMessage());
+            throw $e;
+        }
     }
 
-    public function getTrainerSchedule(string $trainerId, ?string $startDate = null, ?string $endDate = null): array
+    public function updateTrainer($id, array $data): Trainer
+    {
+        DB::beginTransaction();
+        try {
+            $trainer = $this->getTrainerById($id);
+            
+            // Handle specializations as JSON
+            if (isset($data['specializations']) && is_array($data['specializations'])) {
+                $data['specializations'] = json_encode($data['specializations']);
+            }
+            
+            // Handle certifications as JSON
+            if (isset($data['certifications']) && is_array($data['certifications'])) {
+                $data['certifications'] = json_encode($data['certifications']);
+            }
+
+            $updatedTrainer = $this->trainerRepository->updateTrainer($id, $data);
+
+            // Log activity
+            ActivityLogHelper::log(
+                'trainer',
+                'updated',
+                "Trainer {$updatedTrainer->name} updated",
+                $updatedTrainer->id
+            );
+
+            DB::commit();
+            return $updatedTrainer;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating trainer: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function deleteTrainer($id): bool
+    {
+        DB::beginTransaction();
+        try {
+            $trainer = $this->getTrainerById($id);
+            
+            // Check if trainer has active classes
+            $activeClasses = GymClass::where('trainer_id', $id)
+                ->where('status', 'active')
+                ->count();
+                
+            if ($activeClasses > 0) {
+                throw new \Exception('Cannot delete trainer with active classes. Please reassign or cancel classes first.');
+            }
+
+            $this->trainerRepository->deleteTrainer($id);
+
+            // Log activity
+            ActivityLogHelper::log(
+                'trainer',
+                'deleted',
+                "Trainer {$trainer->name} deleted",
+                $id
+            );
+
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting trainer: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function getTrainerSchedule($trainerId, $startDate = null, $endDate = null): array
     {
         try {
             $startDate = $startDate ? Carbon::parse($startDate) : Carbon::now()->startOfWeek();
@@ -197,22 +169,22 @@ class TrainerService implements TrainerServiceInterface
 
             return GymClass::with(['classRegistrations.member'])
                 ->where('trainer_id', $trainerId)
-                ->whereBetween('schedule_day', [$startDate, $endDate]) // Assuming schedule_day is the date field
-                ->orderBy('schedule_day')
+                ->whereBetween('start_date', [$startDate, $endDate])
+                ->orderBy('start_date')
                 ->orderBy('start_time')
                 ->get()
                 ->map(function ($class) {
                     return [
                         'id' => $class->id,
-                        'name' => $class->class_name, // Assuming class_name
-                        'date' => $class->schedule_day,
+                        'name' => $class->name,
+                        'date' => $class->start_date,
                         'start_time' => $class->start_time,
                         'end_time' => $class->end_time,
                         'duration' => $class->duration,
-                        'capacity' => $class->max_capacity, // Assuming max_capacity
+                        'capacity' => $class->capacity,
                         'registered' => $class->classRegistrations->count(),
-                        'status' => $class->is_active ? 'Active' : 'Inactive', // Assuming is_active for status
-                        'location' => $class->location // Assuming location field
+                        'status' => $class->status,
+                        'location' => $class->location
                     ];
                 })->toArray();
         } catch (\Exception $e) {
@@ -221,10 +193,10 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getAvailableTrainers(string $date, string $startTime, string $endTime): Collection
+    public function getAvailableTrainers($date, $startTime, $endTime): \Illuminate\Database\Eloquent\Collection
     {
         try {
-            $conflictingTrainerIds = GymClass::where('schedule_day', $date) // Assuming schedule_day
+            $conflictingTrainerIds = GymClass::where('start_date', $date)
                 ->where(function ($query) use ($startTime, $endTime) {
                     $query->whereBetween('start_time', [$startTime, $endTime])
                         ->orWhereBetween('end_time', [$startTime, $endTime])
@@ -236,7 +208,7 @@ class TrainerService implements TrainerServiceInterface
                 ->pluck('trainer_id')
                 ->toArray();
 
-            return Trainer::where('is_active', true) // Assuming is_active for status
+            return Trainer::where('status', 'active')
                 ->whereNotIn('id', $conflictingTrainerIds)
                 ->get();
         } catch (\Exception $e) {
@@ -245,7 +217,7 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function assignTrainerToClass(string $trainerId, string $classId): bool
+    public function assignTrainerToClass($trainerId, $classId): bool
     {
         DB::beginTransaction();
         try {
@@ -255,7 +227,7 @@ class TrainerService implements TrainerServiceInterface
             // Check for conflicts
             $hasConflict = $this->checkTrainerAvailability(
                 $trainerId,
-                $class->schedule_day, // Assuming schedule_day
+                $class->start_date,
                 $class->start_time,
                 $class->end_time
             );
@@ -266,6 +238,14 @@ class TrainerService implements TrainerServiceInterface
 
             $class->update(['trainer_id' => $trainerId]);
 
+            // Log activity
+            ActivityLogHelper::log(
+                'trainer',
+                'assigned_to_class',
+                "Trainer {$trainer->name} assigned to class {$class->name}",
+                $trainerId
+            );
+
             DB::commit();
             return true;
         } catch (\Exception $e) {
@@ -275,7 +255,7 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function removeTrainerFromClass(string $trainerId, string $classId): bool
+    public function removeTrainerFromClass($trainerId, $classId): bool
     {
         DB::beginTransaction();
         try {
@@ -283,6 +263,14 @@ class TrainerService implements TrainerServiceInterface
             $class = GymClass::findOrFail($classId);
             
             $class->update(['trainer_id' => null]);
+
+            // Log activity
+            ActivityLogHelper::log(
+                'trainer',
+                'removed_from_class',
+                "Trainer {$trainer->name} removed from class {$class->name}",
+                $trainerId
+            );
 
             DB::commit();
             return true;
@@ -293,22 +281,19 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getTrainerStats(string $trainerId, string $period = 'month'): array
+    public function getTrainerStats($trainerId, $period = 'month'): array
     {
         try {
             $trainer = $this->getTrainerById($trainerId);
-            if (!$trainer) {
-                return []; // Or throw an exception
-            }
             $startDate = $this->getStartDateForPeriod($period);
             $endDate = Carbon::now();
 
             $classes = GymClass::where('trainer_id', $trainerId)
-                ->whereBetween('schedule_day', [$startDate, $endDate]) // Assuming schedule_day
+                ->whereBetween('start_date', [$startDate, $endDate])
                 ->get();
 
             $totalClasses = $classes->count();
-            $completedClasses = $classes->where('status', 'completed')->count(); // Assuming status field
+            $completedClasses = $classes->where('status', 'completed')->count();
             $cancelledClasses = $classes->where('status', 'cancelled')->count();
             
             $totalParticipants = ClassRegistration::whereIn('class_id', $classes->pluck('id'))
@@ -333,23 +318,20 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getTrainerEarnings(string $trainerId, ?int $month = null, ?int $year = null): array
+    public function getTrainerEarnings($trainerId, $month = null, $year = null): array
     {
         try {
             $trainer = $this->getTrainerById($trainerId);
-            if (!$trainer) {
-                return []; // Or throw an exception
-            }
             $month = $month ?? Carbon::now()->month;
             $year = $year ?? Carbon::now()->year;
 
             $classes = GymClass::where('trainer_id', $trainerId)
-                ->whereMonth('schedule_day', $month) // Assuming schedule_day
-                ->whereYear('schedule_day', $year)
+                ->whereMonth('start_date', $month)
+                ->whereYear('start_date', $year)
                 ->where('status', 'completed')
                 ->get();
 
-            $baseEarnings = $classes->count() * ($trainer->hourly_rate ?? 0); // Default to 0 if null
+            $baseEarnings = $classes->count() * ($trainer->hourly_rate ?? 50);
             
             $participantBonus = 0;
             foreach ($classes as $class) {
@@ -375,22 +357,19 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getDashboardData(?string $trainerId = null): array
+    public function getDashboardData($trainerId = null): array
     {
         try {
             $today = Carbon::today();
-            // $thisWeek = Carbon::now()->startOfWeek(); // Not directly used in this block
-            // $thisMonth = Carbon::now()->startOfMonth(); // Not directly used in this block
+            $thisWeek = Carbon::now()->startOfWeek();
+            $thisMonth = Carbon::now()->startOfMonth();
 
             if ($trainerId) {
                 // Individual trainer dashboard
                 $trainer = $this->getTrainerById($trainerId);
-                if (!$trainer) {
-                    return []; // Or throw an exception
-                }
                 
                 $todayClasses = GymClass::where('trainer_id', $trainerId)
-                    ->whereDate('schedule_day', $today) // Assuming schedule_day
+                    ->whereDate('start_date', $today)
                     ->with(['classRegistrations.member'])
                     ->orderBy('start_time')
                     ->get();
@@ -409,9 +388,9 @@ class TrainerService implements TrainerServiceInterface
             } else {
                 // Admin dashboard for all trainers
                 $totalTrainers = Trainer::count();
-                $activeTrainers = Trainer::where('is_active', true)->count(); // Assuming is_active for status
+                $activeTrainers = Trainer::where('status', 'active')->count();
                 
-                $todayClasses = GymClass::whereDate('schedule_day', $today) // Assuming schedule_day
+                $todayClasses = GymClass::whereDate('start_date', $today)
                     ->with(['trainer', 'classRegistrations'])
                     ->get();
 
@@ -430,11 +409,11 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function checkTrainerAvailability(string $trainerId, string $date, string $startTime, string $endTime): bool
+    public function checkTrainerAvailability($trainerId, $date, $startTime, $endTime): bool
     {
         try {
             $conflictingClasses = GymClass::where('trainer_id', $trainerId)
-                ->where('schedule_day', $date) // Assuming schedule_day
+                ->where('start_date', $date)
                 ->where('status', '!=', 'cancelled')
                 ->where(function ($query) use ($startTime, $endTime) {
                     $query->whereBetween('start_time', [$startTime, $endTime])
@@ -453,36 +432,36 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getTopPerformingTrainers(int $limit = 5): Collection
+    public function getTopPerformingTrainers($limit = 5): \Illuminate\Database\Eloquent\Collection
     {
         try {
             $startDate = Carbon::now()->startOfMonth();
             $endDate = Carbon::now();
 
             return Trainer::withCount([
-                'classes as classes_this_month' => function ($query) use ($startDate, $endDate) { // Changed gymClasses to classes
-                    $query->whereBetween('schedule_day', [$startDate, $endDate]) // Assuming schedule_day
+                'gymClasses as classes_this_month' => function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('start_date', [$startDate, $endDate])
                           ->where('status', 'completed');
                 }
             ])
-            ->with(['classes' => function ($query) use ($startDate, $endDate) { // Changed gymClasses to classes
-                $query->whereBetween('schedule_day', [$startDate, $endDate]) // Assuming schedule_day
+            ->with(['gymClasses' => function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('start_date', [$startDate, $endDate])
                       ->where('status', 'completed')
                       ->withCount(['classRegistrations as participants' => function ($q) {
                           $q->where('status', 'confirmed');
                       }]);
             }])
-            ->where('is_active', true) // Assuming is_active for status
+            ->where('status', 'active')
             ->orderBy('classes_this_month', 'desc')
             ->limit($limit)
             ->get()
             ->map(function ($trainer) {
-                $totalParticipants = $trainer->classes->sum('participants'); // Changed gymClasses to classes
+                $totalParticipants = $trainer->gymClasses->sum('participants');
                 return [
                     'id' => $trainer->id,
-                    'name' => $trainer->full_name, // Assuming full_name attribute
+                    'name' => $trainer->name,
                     'email' => $trainer->email,
-                    'specialization' => $trainer->specialization, // Assuming specialization field
+                    'specializations' => $trainer->specializations,
                     'classes_this_month' => $trainer->classes_this_month,
                     'total_participants' => $totalParticipants,
                     'average_participants' => $trainer->classes_this_month > 0 
@@ -496,11 +475,11 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getTrainersBySpecialization(string $specialization): Collection
+    public function getTrainersBySpecialization($specialization): \Illuminate\Database\Eloquent\Collection
     {
         try {
-            return Trainer::where('is_active', true) // Assuming is_active for status
-                ->where('specialization', 'like', "%{$specialization}%") // Assuming specialization field
+            return Trainer::where('status', 'active')
+                ->where('specializations', 'like', "%{$specialization}%")
                 ->get();
         } catch (\Exception $e) {
             Log::error('Error fetching trainers by specialization: ' . $e->getMessage());
@@ -508,13 +487,39 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getTrainerClasses(string $trainerId, string $status = 'active'): Collection
+    public function updateTrainerStatus($id, $status): Trainer
+    {
+        DB::beginTransaction();
+        try {
+            $trainer = $this->getTrainerById($id);
+            $oldStatus = $trainer->status;
+            
+            $trainer->update(['status' => $status]);
+
+            // Log activity
+            ActivityLogHelper::log(
+                'trainer',
+                'status_updated',
+                "Trainer {$trainer->name} status changed from {$oldStatus} to {$status}",
+                $id
+            );
+
+            DB::commit();
+            return $trainer;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating trainer status: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function getTrainerClasses($trainerId, $status = 'active'): \Illuminate\Database\Eloquent\Collection
     {
         try {
             return GymClass::where('trainer_id', $trainerId)
                 ->where('status', $status)
                 ->with(['classRegistrations.member'])
-                ->orderBy('schedule_day') // Assuming schedule_day
+                ->orderBy('start_date')
                 ->orderBy('start_time')
                 ->get();
         } catch (\Exception $e) {
@@ -529,7 +534,7 @@ class TrainerService implements TrainerServiceInterface
             $stats = $this->getTrainerStats($trainer->id, 'month');
             return [
                 'trainer_id' => $trainer->id,
-                'name' => $trainer->full_name, // Assuming full_name
+                'name' => $trainer->name,
                 'performance_metrics' => $stats
             ];
         } catch (\Exception $e) {
@@ -538,16 +543,16 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getTrainerClassHistory(string $trainerId, ?string $startDate = null, ?string $endDate = null): Collection
+    public function getTrainerClassHistory($trainerId, $startDate = null, $endDate = null): \Illuminate\Database\Eloquent\Collection
     {
         try {
             $startDate = $startDate ? Carbon::parse($startDate) : Carbon::now()->subMonth();
             $endDate = $endDate ? Carbon::parse($endDate) : Carbon::now();
 
             return GymClass::where('trainer_id', $trainerId)
-                ->whereBetween('schedule_day', [$startDate, $endDate]) // Assuming schedule_day
+                ->whereBetween('start_date', [$startDate, $endDate])
                 ->with(['classRegistrations.member'])
-                ->orderBy('schedule_day', 'desc')
+                ->orderBy('start_date', 'desc')
                 ->get();
         } catch (\Exception $e) {
             Log::error('Error fetching trainer class history: ' . $e->getMessage());
@@ -555,7 +560,14 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    private function getStartDateForPeriod(string $period): Carbon
+    private function generateTrainerId()
+    {
+        $lastTrainer = Trainer::orderBy('id', 'desc')->first();
+        $nextId = $lastTrainer ? $lastTrainer->id + 1 : 1;
+        return 'TRN' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function getStartDateForPeriod($period)
     {
         switch ($period) {
             case 'week':
@@ -569,8 +581,13 @@ class TrainerService implements TrainerServiceInterface
         }
     }
 
-    public function getActiveTrainers(): Collection
+    public function getActiveTrainers(): \Illuminate\Database\Eloquent\Collection
     {
-        return Trainer::where('is_active', true)->get(); // Assuming is_active
+        return Trainer::where('status', 'active')->get();
+    }
+
+    public function getPaginatedTrainers(Request $request): LengthAwarePaginator
+    {
+        return $this->trainerRepository->getPaginatedTrainers($request);
     }
 }

@@ -53,7 +53,12 @@
         <div data-i18n="Attendance">Attendance</div>
     </a>
 </li>
-
+<li class="menu-item {{ $activePage == 'users' ? 'active' : '' }}">
+    <a href="{{ route('users.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons ti ti-users"></i>
+        <div data-i18n="Users">Users</div>
+    </a>
+</li>
 
 {{-- Roles --}}
 <li class="menu-item {{ $activePage == 'roles' ? 'active' : '' }}">

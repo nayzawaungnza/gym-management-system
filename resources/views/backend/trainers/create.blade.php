@@ -1,6 +1,5 @@
 @extends('layouts.master', ['activePage' => 'trainers', 'titlePage' => 'Add Trainer'])
 
-
 @section('page-script')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -65,23 +64,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="card-body">
                     <form action="{{ route('trainers.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
-                        <div class="row">
-                            <div class="mb-3 col-md-6">
-                                <label for="user_id" class="form-label">Trainer ID *</label>
-                                <select class="form-select @error('user_id') is-invalid @enderror" 
-                                        id="user_id" name="user_id" required>
-                                    <option value="">Select Trainer ID</option>
-                                    @foreach($users as $user)
-                                        <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>{{ $user->full_name }}</option>
+                        {{-- Hidden field for role --}}
+                        <input type="hidden" name="role" value="Trainer">
+
+    @if($errors->any())
+                            <div class="alert alert-danger">
+                                <ul>
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
                                     @endforeach
-                                </select>
-                                
-                                @error('user_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                </ul>
                             </div>
-                        </div>
+        
+    @endif
+
                         <div class="row">
+                            {{-- User fields --}}
                             <div class="mb-3 col-md-6">
                                 <label for="first_name" class="form-label">First Name *</label>
                                 <input type="text" class="form-control @error('first_name') is-invalid @enderror" 
@@ -107,6 +105,19 @@ document.addEventListener('DOMContentLoaded', function() {
                                 @enderror
                             </div>
                             <div class="mb-3 col-md-6">
+                                <label for="password" class="form-label">Password *</label>
+                                <input type="password" class="form-control @error('password') is-invalid @enderror" 
+                                       id="password" name="password" required>
+                                @error('password')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="password_confirmation" class="form-label">Confirm Password *</label>
+                                <input type="password" class="form-control" 
+                                       id="password_confirmation" name="password_confirmation" required>
+                            </div>
+                            <div class="mb-3 col-md-6">
                                 <label for="phone" class="form-label">Phone</label>
                                 <input type="text" class="form-control @error('phone') is-invalid @enderror" 
                                        id="phone" name="phone" value="{{ old('phone') }}">
@@ -114,6 +125,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+                            {{-- End User fields --}}
+
+                            {{-- Trainer specific fields --}}
                             <div class="mb-3 col-md-6">
                                 <label for="specialization" class="form-label">Specialization</label>
                                 <input type="text" class="form-control @error('specialization') is-invalid @enderror" 
@@ -124,56 +138,59 @@ document.addEventListener('DOMContentLoaded', function() {
                                 @enderror
                             </div>
                             <div class="mb-3 col-md-12">
-    <label class="form-label">Certifications</label>
-    <div id="certifications-container">
-        @php
-            $oldCerts = old('certifications', isset($trainer) ? $trainer->certifications : []);
-            $defaultCert = ['name' => '', 'year' => ''];
-        @endphp
+                                <label class="form-label">Certifications</label>
+                                <div id="certifications-container">
+                                    @php
+                                        $oldCerts = old('certifications', []);
+                                        $defaultCert = ['name' => '', 'year' => ''];
+                                    @endphp
 
-        @foreach(empty($oldCerts) ? [$defaultCert] : $oldCerts as $index => $cert)
-        <div class="certification-entry border p-3 mb-3 rounded">
-            <div class="row">
-                <div class="col-md-6">
-                    <label class="form-label">Certification Name</label>
-                    <input type="text" 
-                           class="form-control" 
-                           name="certifications[{{ $index }}][name]" 
-                           value="{{ $cert['name'] ?? '' }}"
-                           required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Year Obtained</label>
-                    <input type="number" 
-                           class="form-control" 
-                           name="certifications[{{ $index }}][year]" 
-                           value="{{ $cert['year'] ?? '' }}"
-                           min="1900" 
-                           max="{{ date('Y') }}"
-                           required>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    @if($loop->first)
-                        <button type="button" class="btn btn-success add-certification">
-                            <i class="ti ti-plus"></i> Add
-                        </button>
-                    @else
-                        <button type="button" class="btn btn-danger remove-certification">
-                            <i class="ti ti-minus"></i> Remove
-                        </button>
-                    @endif
-                </div>
-            </div>
-        </div>
-        @endforeach
-    </div>
-    @error('certifications')
-        <div class="invalid-feedback d-block">{{ $message }}</div>
-    @enderror
-</div>
-
-
-
+                                    @foreach(empty($oldCerts) ? [$defaultCert] : $oldCerts as $index => $cert)
+                                    <div class="certification-entry border p-3 mb-3 rounded">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Certification Name</label>
+                                                <input type="text" 
+                                                       class="form-control" 
+                                                       name="certifications[{{ $index }}][name]" 
+                                                       value="{{ $cert['name'] ?? '' }}"
+                                                       required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Year Obtained</label>
+                                                <input type="number" 
+                                                       class="form-control" 
+                                                       name="certifications[{{ $index }}][year]" 
+                                                       value="{{ $cert['year'] ?? '' }}"
+                                                       min="1900" 
+                                                       max="{{ date('Y') }}"
+                                                       required>
+                                            </div>
+                                            <div class="col-md-2 d-flex align-items-end">
+                                                @if($loop->first)
+                                                    <button type="button" class="btn btn-success add-certification">
+                                                        <i class="ti ti-plus"></i> Add
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-danger remove-certification">
+                                                        <i class="ti ti-minus"></i> Remove
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                                @error('certifications')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                                @error('certifications.*.name')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                                @error('certifications.*.year')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
 
                             <div class="mb-3 col-md-6">
                                 <label for="hire_date" class="form-label">Hire Date *</label>
@@ -209,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="mb-3 col-md-6">
                                 <div class="form-check mt-4 pt-2">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" checked>
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="is_active">
                                         Active Status
                                     </label>

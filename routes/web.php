@@ -151,6 +151,8 @@ Route::post('/email/resend-code', [App\Http\Controllers\Auth\AuthController::cla
         // Route::post('attendance/check-out', [App\Http\Controllers\Backend\AttendanceController::class, 'checkOut'])->name('attendance.check-out');
         // Route::get('attendance/verify/{token}', [App\Http\Controllers\Backend\AttendanceController::class, 'verifyQR'])->name('attendance.verify');
         
+        // User Management
+        Route::resource('users', App\Http\Controllers\Backend\UserController::class);
         // Activity Logs
         Route::get('activity-logs', [App\Http\Controllers\Backend\ActivityLogController::class, 'index'])->name('activity_logs.index');
         Route::get('activity-logs/{activityLog}', [App\Http\Controllers\Backend\ActivityLogController::class, 'show'])->name('activity_logs.show');

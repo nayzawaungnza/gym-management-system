@@ -5,112 +5,117 @@ namespace App\Services\Interfaces;
 use App\Models\Trainer;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection; // Import Collection
 
 interface TrainerServiceInterface
 {
-    public function getTrainerElouent();
     /**
-     * Get all trainers with filters
+     * Get trainers Eloquent query with filters.
      */
-    public function getAllTrainers($filters = []);
+    public function getTrainerEloquent(array $filters = []); // Corrected typo and added filters
 
     /**
-     * Get trainer by ID
+     * Create a new trainer and associated user.
      */
-    public function getTrainerById($id);
+    public function createTrainerAndUser(array $data);
 
     /**
-     * Get paginated trainers with filters
+     * Update an existing trainer and associated user.
+     */
+    public function updateTrainer(Trainer $trainer, array $data): Trainer; // Changed to Trainer object
+
+    /**
+     * Delete a trainer and handle associated user.
+     */
+    public function deleteTrainer(Trainer $trainer): bool; // Changed to Trainer object
+
+    /**
+     * Change trainer status and associated user status.
+     */
+    public function changeStatus(Trainer $trainer): Trainer; // Changed to Trainer object
+
+    /**
+     * Get all trainers with filters.
+     */
+    public function getAllTrainers(array $filters = []): Collection; // Added return type
+
+    /**
+     * Get trainer by ID.
+     */
+    public function getTrainerById(string $id): ?Trainer; // Added return type and nullable
+
+    /**
+     * Get paginated trainers with filters.
      */
     public function getPaginatedTrainers(Request $request): LengthAwarePaginator;
 
     /**
-     * Create a new trainer
+     * Get trainer statistics.
      */
-    public function createTrainer(array $data): Trainer;
+    public function getTrainerStats(string $trainerId, string $period = 'month'): array;
 
     /**
-     * Update an existing trainer
+     * Get active trainers for dropdown.
      */
-    public function updateTrainer($id, array $data): Trainer;
+    public function getActiveTrainers(): Collection;
 
     /**
-     * Delete a trainer
+     * Get trainer's class schedule.
      */
-    public function deleteTrainer($id): bool;
+    public function getTrainerSchedule(string $trainerId, ?string $startDate = null, ?string $endDate = null): array;
 
     /**
-     * Get trainer statistics
-     */
-    public function getTrainerStats($trainerId, $period = 'month'): array;
-
-    /**
-     * Get active trainers for dropdown
-     */
-    public function getActiveTrainers(): \Illuminate\Database\Eloquent\Collection;
-
-    /**
-     * Get trainer's class schedule
-     */
-    public function getTrainerSchedule($trainerId, $startDate = null, $endDate = null): array;
-
-    /**
-     * Get trainer's performance metrics
+     * Get trainer's performance metrics.
      */
     public function getTrainerPerformance(Trainer $trainer): array;
 
     /**
-     * Check trainer availability
+     * Check trainer availability.
      */
-    public function checkTrainerAvailability($trainerId, $date, $startTime, $endTime): bool;
+    public function checkTrainerAvailability(string $trainerId, string $date, string $startTime, string $endTime): bool;
 
     /**
-     * Get trainers available for specific time slot
+     * Get trainers available for specific time slot.
      */
-    public function getAvailableTrainers($date, $startTime, $endTime): \Illuminate\Database\Eloquent\Collection;
+    public function getAvailableTrainers(string $date, string $startTime, string $endTime): Collection;
 
     /**
-     * Assign trainer to class
+     * Assign trainer to class.
      */
-    public function assignTrainerToClass($trainerId, $classId): bool;
+    public function assignTrainerToClass(string $trainerId, string $classId): bool;
 
     /**
-     * Remove trainer from class
+     * Remove trainer from class.
      */
-    public function removeTrainerFromClass($trainerId, $classId): bool;
+    public function removeTrainerFromClass(string $trainerId, string $classId): bool;
 
     /**
-     * Get trainer's monthly earnings
+     * Get trainer's monthly earnings.
      */
-    public function getTrainerEarnings($trainerId, $month = null, $year = null): array;
+    public function getTrainerEarnings(string $trainerId, ?int $month = null, ?int $year = null): array;
 
     /**
-     * Update trainer status
+     * Get trainer dashboard data.
      */
-    public function updateTrainerStatus($id, $status): Trainer;
+    public function getDashboardData(?string $trainerId = null): array;
 
     /**
-     * Get trainer dashboard data
+     * Get top performing trainers.
      */
-    public function getDashboardData($trainerId = null): array;
+    public function getTopPerformingTrainers(int $limit = 5): Collection;
 
     /**
-     * Get top performing trainers
+     * Get trainers by specialization.
      */
-    public function getTopPerformingTrainers($limit = 5): \Illuminate\Database\Eloquent\Collection;
+    public function getTrainersBySpecialization(string $specialization): Collection;
 
     /**
-     * Get trainers by specialization
+     * Get trainer's classes by status.
      */
-    public function getTrainersBySpecialization($specialization): \Illuminate\Database\Eloquent\Collection;
+    public function getTrainerClasses(string $trainerId, string $status = 'active'): Collection;
 
     /**
-     * Get trainer's classes by status
+     * Get trainer's class history.
      */
-    public function getTrainerClasses($trainerId, $status = 'active'): \Illuminate\Database\Eloquent\Collection;
-
-    /**
-     * Get trainer's class history
-     */
-    public function getTrainerClassHistory($trainerId, $startDate = null, $endDate = null): \Illuminate\Database\Eloquent\Collection;
+    public function getTrainerClassHistory(string $trainerId, ?string $startDate = null, ?string $endDate = null): Collection;
 }

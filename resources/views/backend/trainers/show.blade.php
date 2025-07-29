@@ -114,7 +114,7 @@
                                 <tbody>
                                     @foreach($trainer->classes as $class)
                                     <tr>
-                                        <td>{{ $class->name }}</td>
+                                        <td>{{ $class->class_name }}</td>
                                         <td>
                                             {{ $class->schedule_day }}<br>
                                             {{ $class->start_time }} - {{ $class->end_time }}

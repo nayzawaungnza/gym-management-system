@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('emergency_contact')->nullable();
             $table->string('emergency_phone')->nullable();
             $table->string('profile_photo')->nullable();
-            $table->tinyInteger('is_admin')->default(0); // 0=member, 1=admin, 2=trainer
+            $table->tinyInteger('is_admin')->default(0); // 0=Member, 1=Admin, 2=Trainer
             $table->boolean('is_active')->default(true);
             $table->string('two_factor_secret')->nullable();
             $table->text('two_factor_recovery_codes')->nullable();
