@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use App\Traits\Uuids;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Activitylog\Traits\LogsActivity;
+use App\Models\MemberSubscription;
 use Spatie\Activitylog\LogOptions;
+use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Member extends Model
 {
@@ -96,6 +97,18 @@ class Member extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(MemberSubscription::class);
+    }
+
+    public function activeSubscription()
+    {
+        return $this->hasOne(MemberSubscription::class)
+                    ->where('status', 'active')
+                    ->where('end_date', '>=', now());
     }
 
     /**

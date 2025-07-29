@@ -19,6 +19,7 @@ class MainController extends Controller
         $memberCount = Member::where('status', 'active')->count();
         $trainerCount = Trainer::where('is_active', true)->count();
         $classCount = GymClass::where('is_active', true)->count();
+        //$membershipTypes = MembershipType::where('is_active', true)->count();
 
         $stats = [
             'members' => $memberCount > 0 ? (string)$memberCount . '+' : '500+',
@@ -53,9 +54,9 @@ class MainController extends Controller
             ->get();
 
         // Check if membership types are available for registration
-        $membershipTypesAvailable = MembershipType::active()->exists();
+        $membershipTypes = MembershipType::where('is_active', true)->get();
 
-        return view('frontend.main', compact('paymentMethods','stats', 'trainers', 'gymClasses', 'membershipTypesAvailable'));
+        return view('frontend.main', compact('paymentMethods','stats', 'trainers', 'gymClasses', 'membershipTypes'));
     }
 
     public function enrollInClass(Request $request)

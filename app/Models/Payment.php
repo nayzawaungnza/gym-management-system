@@ -16,6 +16,7 @@ class Payment extends Model
         'member_id',
         'membership_type_id',
         'class_registration_id',
+        'member_subscription_id',
         'amount',
         'payment_date',
         'payment_method_id',
@@ -44,6 +45,10 @@ class Payment extends Model
     public function classRegistration(): BelongsTo
     {
         return $this->belongsTo(ClassRegistration::class);
+    }
+    public function memberSubscription(): BelongsTo
+    {
+        return $this->belongsTo(MemberSubscription::class);
     }
 
     public function paymentMethod(): BelongsTo

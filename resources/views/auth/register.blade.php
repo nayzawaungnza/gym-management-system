@@ -68,9 +68,10 @@
 
                         <form id="formAuthentication" class="mb-3" action="{{ route('register') }}" method="POST">
                             @csrf
-                            
+
+                            <input class="form-check-input" type="hidden" value="Member" name="role"/>
                             <!-- Role Selection -->
-                            <div class="mb-3">
+                            {{-- <div class="mb-3">
                                 <label class="form-label">I want to join as</label>
                                 <div class="row">
                                     <div class="col-6">
@@ -105,7 +106,7 @@
                                 @error('role')
                                 <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
-                            </div>
+                            </div> --}}
 
                             <!-- Personal Information -->
                             <div class="mb-3">

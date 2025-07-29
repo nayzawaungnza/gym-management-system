@@ -2,20 +2,21 @@
 
 namespace App\Http\Controllers\Frontend;
 
-use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use App\Models\Member;
-use App\Models\GymClass;
-use App\Models\ClassRegistration;
 use App\Models\Payment;
-use App\Models\MembershipType;
-use App\Models\PaymentMethod;
+use App\Models\GymClass;
 use App\Models\Attendance;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\PaymentMethod;
+use App\Models\MembershipType;
+use App\Models\ClassRegistration;
+use App\Models\MemberSubscription;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class MemberController extends Controller
 {
@@ -504,6 +505,324 @@ class MemberController extends Controller
             ], 500);
         }
     }
+    /**
+     * Enroll in a membership plan
+     */
+    public function enrollMembership(Request $request, MembershipType $membershipType)
+{
+    try {
+        $user = Auth::user();
+        $member = $user->member;
+        
+        if (!$member) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Member profile required'
+            ], 400);
+        }
+
+        // Check if user already has an active subscription for this membership type
+        $activeSubscription = $member->subscriptions()
+            ->where('membership_type_id', $membershipType->id)
+            ->where('status', 'active')
+            ->where('end_date', '>=', now())
+            ->first();
+
+        if ($activeSubscription) {
+            return response()->json([
+                'success' => false,
+                'error' => 'You already have an active subscription for this membership type'
+            ], 400);
+        }
+
+        // Validate payment method
+        $validator = Validator::make($request->all(), [
+            'payment_method_id' => 'required|exists:payment_methods,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Please select a valid payment method'
+            ], 400);
+        }
+
+        $paymentMethod = PaymentMethod::findOrFail($request->payment_method_id);
+
+        // Check if membership type is active
+        if (!$membershipType->is_active) {
+            Log::error('Membership enrollment failed - inactive membership type', [
+                'member_id' => $member->id,
+                'membership_type_id' => $membershipType->id,
+                'membershipType' => $membershipType->type_name
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Membership type is not available'
+
+            ], 400);
+        }
+
+        DB::beginTransaction();
+
+        // Check for existing cancelled membership of the same type
+        $cancelledSubscription = MemberSubscription::where('member_id', $member->id)
+            ->where('membership_type_id', $membershipType->id)
+            ->where('status', 'cancelled')
+            ->latest()
+            ->first();
+
+        // Calculate dates
+        $startDate = now();
+        $endDate = now()->addMonths($membershipType->duration_months);
+
+        // Create new subscription
+        $subscription = MemberSubscription::create([
+            'member_id' => $member->id,
+            'membership_type_id' => $membershipType->id,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'amount_paid' => $membershipType->price,
+            'status' => 'active',
+            'auto_renew' => $request->auto_renew ?? false,
+            'previous_subscription_id' => $cancelledSubscription ? $cancelledSubscription->id : null,
+        ]);
+
+        // Process payment
+        $payment = Payment::create([
+            'member_id' => $member->id,
+            'amount' => $membershipType->price,
+            'payment_date' => now(),
+            'payment_method_id' => $paymentMethod->id,
+            'status' => 'completed',
+            'description' => 'Membership Enrollment - ' . $membershipType->type_name,
+            'receipt_number' => 'MEM' . time(),
+            'processed_by' => $user->id,
+            'member_subscription_id' => $subscription->id,
+        ]);
+
+        // Update member's membership info
+        $member->update([
+            'membership_type_id' => $membershipType->id,
+            'membership_start_date' => $startDate,
+            'membership_end_date' => $endDate,
+            'status' => 'active'
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully enrolled in ' . $membershipType->type_name . ' membership!',
+            'is_reactivation' => (bool)$cancelledSubscription,
+            'subscription_id' => $subscription->id
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        \Log::error('Membership enrollment failed: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'error' => 'Enrollment failed. Please try again.'
+        ], 500);
+    }
+}
+
+public function cancelMembership(Request $request, MemberSubscription $subscription)
+{
+    try {
+        $user = Auth::user();
+        
+        // Verify the subscription belongs to the current user
+        if ($subscription->member_id !== $user->member->id) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Unauthorized action'
+            ], 403);
+        }
+
+        // Check if subscription is already cancelled
+        if ($subscription->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'error' => 'Subscription is already cancelled'
+            ], 400);
+        }
+
+        // Validate cancellation reason
+        $validator = Validator::make($request->all(), [
+            'cancellation_reason' => 'required|string|max:500'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Please provide a cancellation reason'
+            ], 400);
+        }
+
+        DB::beginTransaction();
+
+        // Update the subscription
+        $subscription->update([
+            'status' => 'cancelled',
+            'cancellation_reason' => $request->cancellation_reason,
+            'cancelled_at' => now(),
+            'cancelled_by' => $user->id,
+            'auto_renew' => false
+        ]);
+
+        // Update member status if this was their active membership
+        if ($user->member->membership_type_id === $subscription->membership_type_id) {
+            $user->member->update([
+                'status' => 'inactive'
+            ]);
+        }
+
+        DB::commit();
+
+        \Log::info('Membership cancelled successfully', [
+            'subscription_id' => $subscription->id,
+            'member_id' => $user->member->id
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Membership successfully cancelled'
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        
+        \Log::error('Membership cancellation failed', [
+            'subscription_id' => $subscription->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'error' => 'Cancellation failed. Please try again.'
+        ], 500);
+    }
+}
+
+public function renewMembership(Request $request, MemberSubscription $subscription)
+{
+    try {
+        $user = Auth::user();
+        
+        // Verify the subscription belongs to the current user
+        if ($subscription->member_id !== $user->member->id) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Unauthorized action'
+            ], 403);
+        }
+
+        // Check if subscription can be renewed
+        if ($subscription->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'error' => 'Cannot renew a cancelled subscription'
+            ], 400);
+        }
+
+        // Validate payment method
+        $validator = Validator::make($request->all(), [
+            'payment_method_id' => 'required|exists:payment_methods,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Please select a valid payment method'
+            ], 400);
+        }
+
+        DB::beginTransaction();
+
+        $membershipType = $subscription->membershipType;
+        $paymentMethod = PaymentMethod::findOrFail($request->payment_method_id);
+
+        if (!$paymentMethod->is_active) {
+            throw new \Exception('Selected payment method is not available');
+        }
+
+        // Calculate new dates
+        $newStartDate = $subscription->end_date->isPast() ? now() : $subscription->end_date;
+        $newEndDate = (clone $newStartDate)->addMonths($membershipType->duration_months);
+
+        // Process payment
+        $payment = Payment::create([
+            'member_id' => $user->member->id,
+            'amount' => $membershipType->price,
+            'payment_date' => now(),
+            'payment_method_id' => $paymentMethod->id,
+            'status' => 'completed',
+            'description' => 'Membership Renewal - ' . $membershipType->type_name,
+            'receipt_number' => 'REN' . time(),
+            'processed_by' => $user->id,
+        ]);
+
+        // Create new subscription
+        $newSubscription = MemberSubscription::create([
+            'member_id' => $user->member->id,
+            'membership_type_id' => $membershipType->id,
+            'start_date' => $newStartDate,
+            'end_date' => $newEndDate,
+            'amount_paid' => $membershipType->price,
+            'status' => 'active',
+            'auto_renew' => $request->auto_renew ?? $subscription->auto_renew,
+            'previous_subscription_id' => $subscription->id,
+        ]);
+
+        // Link payment to new subscription
+        $payment->update(['member_subscription_id' => $newSubscription->id]);
+
+        // Update old subscription
+        $subscription->update([
+            'renewed_at' => now(),
+            'renewed_into_id' => $newSubscription->id
+        ]);
+
+        // Update member info
+        $user->member->update([
+            'membership_end_date' => $newEndDate,
+            'status' => 'active'
+        ]);
+
+        DB::commit();
+
+        \Log::info('Membership renewed successfully', [
+            'old_subscription_id' => $subscription->id,
+            'new_subscription_id' => $newSubscription->id,
+            'member_id' => $user->member->id
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Membership successfully renewed until ' . $newEndDate->format('M d, Y'),
+            'new_end_date' => $newEndDate->format('Y-m-d'),
+            'subscription_id' => $newSubscription->id
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        
+        \Log::error('Membership renewal failed', [
+            'subscription_id' => $subscription->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'error' => 'Renewal failed. Please try again.'
+        ], 500);
+    }
+}
 
     /**
      * Cancel class registration

@@ -71,6 +71,18 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
         Route::delete('/classes/{registration}/cancel', [App\Http\Controllers\Frontend\MemberController::class, 'cancelClass'])->name('classes.cancel');
         Route::get('/my-classes', [App\Http\Controllers\Frontend\MemberController::class, 'myClasses'])->name('my-classes');
         Route::get('classes/{class}', [App\Http\Controllers\Frontend\MemberController::class, 'classDetails'])->name('classes.details');
+
+        Route::post('/memberships/{membershipType}/enroll', [App\Http\Controllers\Frontend\MemberController::class, 'enrollMembership'])->name('memberships.enroll');
+
+        Route::post('/memberships/{subscription}/cancel', [App\Http\Controllers\Frontend\MemberController::class, 'cancelMembership'])
+    ->name('memberships.cancel');
+
+    Route::post('/memberships/{subscription}/renew', [App\Http\Controllers\Frontend\MemberController::class, 'renewMembership'])
+    ->name('memberships.renew');
+    
+    Route::get('/my-membership', [App\Http\Controllers\Frontend\MemberSubscriptionController::class, 'index'])->name('my-membership');
+    Route::get('/subscriptions/{subscription}/details', [App\Http\Controllers\Frontend\MemberSubscriptionController::class, 'subscriptionDetails'])->name('subscription.details');
+
         // Attendance
         Route::get('/attendances', [App\Http\Controllers\Frontend\MemberController::class, 'attendance'])->name('attendance');
     });

@@ -3,17 +3,17 @@
 @section('content')
 <div class="container-xxl flex-grow-1 container-p-y">
     <h4 class="py-3 mb-4">
-        <span class="text-muted fw-light">Gym Management /</span> Payments
+        <span class="text-muted fw-light">Gym Management /</span> Payments Transactions
     </h4>
 
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
+       {{-- <div class="card-header d-flex justify-content-between align-items-center">
             {{-- <h5 class="mb-0">Payment Filters</h5> --}}
-            @can('payment-create')
+            {{-- @can('payment-create')
                 <a href="{{ route('payments.create') }}" class="btn btn-primary">
                     <i class="bx bx-plus me-1"></i> Add Payment
                 </a>
-            @endcan
+            @endcan 
         </div>
         <div class="card-body">
             {{-- <form method="GET" action="{{ route('payments.index') }}" class="row g-3 mb-4">
@@ -82,9 +82,9 @@
         <div class="col-md-3 align-self-end">
             <a href="{{ route('payments.index') }}" class="btn btn-secondary w-100">Reset</a>
         </div>
-    </form> --}}
+    </form> 
 
-        </div>
+        </div> --}}
     </div>
 
     <div class="card">

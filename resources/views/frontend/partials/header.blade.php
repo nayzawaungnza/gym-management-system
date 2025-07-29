@@ -78,6 +78,10 @@
                             <a href="{{ url('attendances') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 <i data-lucide="layout-list" class="h-4 w-4 mr-2"></i> Attendances
                             </a>
+                            <a href="{{ url('my-membership') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i data-lucide="credit-card" class="h-4 w-4 mr-2"></i> My Subscriptions
+                            </a>
+
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" class="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
