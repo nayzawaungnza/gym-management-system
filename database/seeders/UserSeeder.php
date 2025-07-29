@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
     {
         // Create Admin User
         $admin = User::updateOrCreate(
-            ['email' => 'admin@gym.com'],
+            ['email' => 'systemadmin@gym.com'],
             [
                 'name' => 'System Administrator',
                 'password' => Hash::make('password'),
@@ -28,7 +28,7 @@ class UserSeeder extends Seeder
 
         // Create Manager User
         $manager = User::updateOrCreate(
-            ['email' => 'manager@gym.com'],
+            ['email' => 'mansddager@gym.com'],
             [
                 'name' => 'Gym Manager',
                 'password' => Hash::make('password'),
@@ -41,7 +41,7 @@ class UserSeeder extends Seeder
 
         // Create Trainer User
         $trainer = User::updateOrCreate(
-            ['email' => 'trainer@gym.com'],
+            ['email' => 'trainsdder@gym.com'],
             [
                 'name' => 'John Trainer',
                 'password' => Hash::make('password'),
@@ -54,7 +54,7 @@ class UserSeeder extends Seeder
 
         // Create Member User
         $member = User::updateOrCreate(
-            ['email' => 'member@gym.com'],
+            ['email' => 'membesddr@gym.com'],
             [
                 'name' => 'Jane Member',
                 'password' => Hash::make('password'),
@@ -69,17 +69,17 @@ class UserSeeder extends Seeder
         $users = [
             [
                 'name' => 'Sarah Johnson',
-                'email' => 'sarah@example.com',
+                'email' => 'sarsdsdah@example.com',
                 'role' => 'member'
             ],
             [
                 'name' => 'Mike Wilson',
-                'email' => 'mike@example.com',
+                'email' => 'mikdfssde@example.com',
                 'role' => 'trainer'
             ],
             [
                 'name' => 'Lisa Brown',
-                'email' => 'lisa@example.com',
+                'email' => 'liscasaa@example.com',
                 'role' => 'member'
             ],
         ];
