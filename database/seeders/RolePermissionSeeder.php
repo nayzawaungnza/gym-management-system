@@ -37,7 +37,10 @@ class RolePermissionSeeder extends Seeder
             // Dashboard permissions
             'dashboard-admin', 'dashboard-trainer', 'dashboard-member',
             // Export permissions
-            'export-members', 'export-attendance', 'export-payments'
+            'export-members', 'export-attendance', 'export-payments',
+            'user-list', 'user-create', 'user-edit', 'user-delete',
+            // Additional permissions
+            
         ];
 
         foreach ($permissions as $permission) {

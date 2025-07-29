@@ -18,11 +18,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolePermissionSeeder::class,
             MembershipTypeSeeder::class,
-            RoleSeeder::class,
+            //RoleSeeder::class,
             UserSeeder::class,
             MemberSeeder::class,
             TrainerSeeder::class,
-            EquipmentSeeder::class,
+            //EquipmentSeeder::class,
             GymClassSeeder::class,
             PaymentMethodTableSeeder::class
         ]);
