@@ -31,6 +31,19 @@
     <!-- Helpers -->
     <script src="/assets/vendor/js/helpers.js"></script>
     <script src="/assets/js/config.js"></script>
+
+    <style>
+        .verification-code-input {
+            font-size: 1.5rem;
+            text-align: center;
+            letter-spacing: 0.5rem;
+            font-weight: bold;
+        }
+        .code-timer {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+    </style>
 </head>
 
 <body>
@@ -54,10 +67,16 @@
                         
                         <h4 class="mb-2">Verify your email ✉️</h4>
                         <p class="mb-4">
-                            Account activation link sent to your email address: 
+                            We've sent a 6-digit verification code to: 
                             <strong>{{ auth()->user()->email }}</strong>
-                            Please follow the link inside to continue.
                         </p>
+
+                        @if (session('status') == 'verification-code-sent')
+                        <div class="alert alert-success alert-dismissible" role="alert">
+                            A new verification code has been sent to your email address.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        @endif
 
                         @if (session('status') == 'verification-link-sent')
                         <div class="alert alert-success alert-dismissible" role="alert">
@@ -71,28 +90,60 @@
                                 <i class="bx bx-envelope display-4 text-primary"></i>
                             </div>
                             
-                            <p class="mb-4">
-                                Didn't get the email? Check your spam folder or 
-                                <form class="d-inline" method="POST" action="{{ route('verification.send') }}">
-                                    @csrf
-                                    <button type="submit" class="btn btn-link p-0 align-baseline">
-                                        click here to resend
-                                    </button>
-                                </form>
+                            <!-- Verification Code Form -->
+                            <form method="POST" action="{{ route('verification.verify.code') }}" class="mb-4">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="verification_code" class="form-label">Enter Verification Code</label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control verification-code-input @error('verification_code') is-invalid @enderror" 
+                                        id="verification_code" 
+                                        name="verification_code" 
+                                        maxlength="6" 
+                                        placeholder="000000"
+                                        autocomplete="off"
+                                        required
+                                    >
+                                    @error('verification_code')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary w-100 mb-3">
+                                    <i class="bx bx-check me-1"></i>
+                                    Verify Code
+                                </button>
+                            </form>
+
+                            <p class="mb-4 code-timer">
+                                Code expires in <span id="timer">10:00</span> minutes
                             </p>
                             
-                            <div class="d-flex justify-content-center gap-2">
+                            <p class="mb-4">
+                                Didn't get the code? Check your spam folder or click below to resend.
+                            </p>
+                            
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <form method="POST" action="{{ route('verification.resend.code') }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline-primary">
+                                        <i class="bx bx-refresh me-1"></i>
+                                        Resend Code
+                                    </button>
+                                </form>
+                                
                                 <form method="POST" action="{{ route('verification.send') }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bx bx-refresh me-1"></i>
-                                        Resend Email
+                                    <button type="submit" class="btn btn-outline-secondary">
+                                        <i class="bx bx-link me-1"></i>
+                                        Send Link Instead
                                     </button>
                                 </form>
                                 
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-outline-secondary">
+                                    <button type="submit" class="btn btn-outline-danger">
                                         <i class="bx bx-log-out me-1"></i>
                                         Logout
                                     </button>
@@ -116,5 +167,38 @@
     
     <!-- Main JS -->
     <script src="/assets/js/main.js"></script>
+
+    <script>
+        // Auto-format verification code input
+        document.getElementById('verification_code').addEventListener('input', function(e) {
+            // Remove any non-numeric characters
+            this.value = this.value.replace(/\D/g, '');
+            
+            // Limit to 6 digits
+            if (this.value.length > 6) {
+                this.value = this.value.slice(0, 6);
+            }
+        });
+
+        // Countdown timer (optional - you can remove this if not needed)
+        let timeLeft = 600; // 10 minutes in seconds
+        const timerElement = document.getElementById('timer');
+        
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft > 0) {
+                timeLeft--;
+                setTimeout(updateTimer, 1000);
+            } else {
+                timerElement.textContent = 'Expired';
+                timerElement.style.color = '#dc3545';
+            }
+        }
+        
+        updateTimer();
+    </script>
 </body>
 </html>

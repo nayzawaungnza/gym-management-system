@@ -57,7 +57,7 @@
                                 <div class="mb-3">
                                     <label for="date_of_birth" class="form-label">Date of Birth *</label>
                                     <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" 
-                                           id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth') }}" required>
+                                           id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth') }}">
                                     @error('date_of_birth')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -190,13 +190,20 @@
                                     
                                     <div class="col-md-6 mb-3">
                                         <label for="preferred_workout_time" class="form-label">Preferred Workout Time</label>
-                                        <input type="text" class="form-control @error('preferred_workout_time') is-invalid @enderror" 
-                                               id="preferred_workout_time" name="preferred_workout_time" value="{{ old('preferred_workout_time') }}"
-                                               placeholder="e.g., Morning, Evening">
+                                        <select 
+                                            class="form-select @error('preferred_workout_time') is-invalid @enderror" 
+                                            id="preferred_workout_time" 
+                                            name="preferred_workout_time">
+                                            <option value="">Select Time</option>
+                                            <option value="Morning" {{ old('preferred_workout_time') == 'Morning' ? 'selected' : '' }}>Morning</option>
+                                            <option value="Afternoon" {{ old('preferred_workout_time') == 'Afternoon' ? 'selected' : '' }}>Afternoon</option>
+                                            <option value="Evening" {{ old('preferred_workout_time') == 'Evening' ? 'selected' : '' }}>Evening</option>
+                                        </select>
                                         @error('preferred_workout_time')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
+
                                     
                                     <div class="col-md-6 mb-3">
                                         <label for="referral_source" class="form-label">Referral Source</label>

@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\Trainer;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\Events\Verified;
@@ -15,9 +16,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Password;
+use App\Notifications\EmailVerificationCode;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Foundation\Auth\ThrottlesLogins;
-use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -88,9 +89,9 @@ class AuthController extends Controller
             return $this->handleInactiveAccount($request, $user);
         }
 
-        // if (!$user->hasVerifiedEmail()) {
-        //     return $this->handleUnverifiedEmail($user);
-        // }
+        if (!$user->hasVerifiedEmail()) {
+            return $this->handleUnverifiedEmail($user);
+        }
 
         // if ($this->requiresTwoFactorAuth($user)) {
         //     return $this->handleTwoFactorAuth($user);
@@ -255,7 +256,7 @@ class AuthController extends Controller
 
                 // 👇 Auto-verify for testing (change to `now()` or null based on env)
                 'email_verified_at' => now(),
-
+                'phone' => $request->phone,
                 'is_admin' => $request->role === 'Member' ? 0 : 2,
                 'is_active' => true,
             ]);
@@ -366,7 +367,23 @@ class AuthController extends Controller
 
     public function verificationNotice()
     {
-        Log::info('Verification notice shown for user: ' . (auth()->check() ? auth()->user()->email : 'unauthenticated'));
+        $user = auth()->user();
+        
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->intended('/dashboard');
+        }
+
+        // Generate verification code if not exists or expired
+        if (!$user->email_verification_code || 
+            !$user->email_verification_code_expires_at || 
+            now()->isAfter($user->email_verification_code_expires_at)) {
+            
+            $code = $user->generateEmailVerificationCode();
+            $user->notify(new EmailVerificationCode($code));
+            Log::info('New verification code generated and sent', ['email' => $user->email]);
+        }
+
+        Log::info('Verification notice shown for user: ' . $user->email);
         return view('auth.verify-email');
     }
 

@@ -43,7 +43,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'last_login_ip',
         'login_count',
         'failed_login_attempts',
-        'locked_until'
+        'locked_until',
+        'email_verification_code', 
+'email_verification_code_expires_at'
     ];
 
     /**
@@ -56,6 +58,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        'email_verification_code', 
     ];
 
     /**
@@ -65,6 +68,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'email_verification_code_expires_at' => 'datetime',
         'password' => 'hashed',
         'date_of_birth' => 'date',
         'is_active' => 'boolean',
@@ -74,6 +78,39 @@ class User extends Authenticatable implements MustVerifyEmail
         'login_count' => 'integer',
         'failed_login_attempts' => 'integer',
     ];
+
+    /**
+     * Generate a new email verification code
+     */
+    public function generateEmailVerificationCode()
+    {
+        $this->email_verification_code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $this->email_verification_code_expires_at = Carbon::now()->addMinutes(10); // Code expires in 10 minutes
+        $this->save();
+        
+        return $this->email_verification_code;
+    }
+
+    /**
+     * Check if verification code is valid
+     */
+    public function isValidVerificationCode($code)
+    {
+        return $this->email_verification_code === $code 
+            && $this->email_verification_code_expires_at 
+            && Carbon::now()->isBefore($this->email_verification_code_expires_at);
+    }
+
+    /**
+     * Clear verification code after successful verification
+     */
+    public function clearVerificationCode()
+    {
+        $this->email_verification_code = null;
+        $this->email_verification_code_expires_at = null;
+        $this->save();
+    }
+    
 
     /**
      * Activity log options

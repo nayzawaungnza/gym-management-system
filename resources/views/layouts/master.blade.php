@@ -91,6 +91,17 @@
                       "timeOut": "8000" // duration in milliseconds
                       });
                }
+
+               var success = "{{ session('success') }}";
+               if(success){
+                      toastr.success(success, "Success", {
+                      "closeButton": true,
+                      "progressBar": true,
+                      "positionClass": "toast-top-right",
+                      "timeOut": "8000" // duration in milliseconds
+                      });
+               }
+
         });
         $(document).ready(function() {
     $('#basic-default-upload-file').change(function(event) {

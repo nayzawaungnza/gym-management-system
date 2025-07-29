@@ -56,9 +56,9 @@
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label for="date_of_birth" class="form-label">Date of Birth *</label>
+                                    <label for="date_of_birth" class="form-label">Date of Birth </label>
                                     <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" 
-                                           id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth', $member->date_of_birth->format('Y-m-d')) }}" required>
+                                           id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth', $member->date_of_birth->format('Y-m-d')) }}" >
                                     @error('date_of_birth')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -180,10 +180,13 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="medical_conditions" class="form-label">Medical Conditions (comma separated)</label>
-                                        <input type="text" class="form-control @error('medical_conditions') is-invalid @enderror" 
-                                               id="medical_conditions" name="medical_conditions" 
-                                               value="{{ old('medical_conditions', $member->medical_conditions ? implode(', ', json_decode($member->medical_conditions, true)) : '') }}"
-                                               placeholder="e.g., Asthma, High blood pressure">
+                                        <input type="text" 
+                                                class="form-control @error('medical_conditions') is-invalid @enderror" 
+                                                id="medical_conditions" 
+                                                name="medical_conditions" 
+                                                value="{{ old('medical_conditions', $member->medical_conditions ? implode(', ', $member->medical_conditions) : '') }}" 
+                                                placeholder="e.g., Asthma, High blood pressure">
+
                                         @error('medical_conditions')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -191,10 +194,12 @@
                                     
                                     <div class="col-md-6 mb-3">
                                         <label for="fitness_goals" class="form-label">Fitness Goals (comma separated)</label>
-                                        <input type="text" class="form-control @error('fitness_goals') is-invalid @enderror" 
-                                               id="fitness_goals" name="fitness_goals" 
-                                               value="{{ old('fitness_goals', $member->fitness_goals ? implode(', ', json_decode($member->fitness_goals, true)) : '') }}"
-                                               placeholder="e.g., Weight loss, Muscle gain">
+                                        <input type="text" 
+                                                class="form-control @error('fitness_goals') is-invalid @enderror" 
+                                                id="fitness_goals" 
+                                                name="fitness_goals" 
+                                                value="{{ old('fitness_goals', $member->fitness_goals ? implode(', ', $member->fitness_goals) : '') }}" 
+                                                placeholder="e.g., Weight loss, Muscle gain">
                                         @error('fitness_goals')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -202,14 +207,19 @@
                                     
                                     <div class="col-md-6 mb-3">
                                         <label for="preferred_workout_time" class="form-label">Preferred Workout Time</label>
-                                        <input type="text" class="form-control @error('preferred_workout_time') is-invalid @enderror" 
-                                               id="preferred_workout_time" name="preferred_workout_time" 
-                                               value="{{ old('preferred_workout_time', $member->preferred_workout_time) }}"
-                                               placeholder="e.g., Morning, Evening">
+                                        <select class="form-select @error('preferred_workout_time') is-invalid @enderror" 
+                                                id="preferred_workout_time" 
+                                                name="preferred_workout_time">
+                                            <option value="">Select Time</option>
+                                            <option value="Morning" {{ old('preferred_workout_time', $member->preferred_workout_time) == 'Morning' ? 'selected' : '' }}>Morning</option>
+                                            <option value="Afternoon" {{ old('preferred_workout_time', $member->preferred_workout_time) == 'Afternoon' ? 'selected' : '' }}>Afternoon</option>
+                                            <option value="Evening" {{ old('preferred_workout_time', $member->preferred_workout_time) == 'Evening' ? 'selected' : '' }}>Evening</option>
+                                        </select>
                                         @error('preferred_workout_time')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
+
                                     
                                     <div class="col-md-6 mb-3">
                                         <label for="referral_source" class="form-label">Referral Source</label>

@@ -88,6 +88,10 @@ class MemberController extends Controller
 
     public function store(Request $request)
     {
+    //     $request->merge([
+    //     'medical_conditions' => array_filter(array_map('trim', explode(',', $request->input('medical_conditions', '')))),
+    //     'fitness_goals' => array_filter(array_map('trim', explode(',', $request->input('fitness_goals', '')))),
+    // ]);
         $request->validate([
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
@@ -101,7 +105,14 @@ class MemberController extends Controller
             'membership_end_date' => 'required|date|after:membership_start_date',
             'emergency_contact_name' => 'nullable|string|max:100',
             'emergency_contact_phone' => 'nullable|string|max:20',
-            'status' => 'required|in:active,inactive,suspended,expired'
+            'status' => 'required|in:active,inactive,suspended,expired',
+            'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            // 'medical_conditions' => 'nullable|array',
+            // 'medical_conditions.*' => 'string|max:255',
+            // 'fitness_goals' => 'nullable|array',
+            // 'fitness_goals.*' => 'string|max:255',
+            'preferred_workout_time' => 'nullable|string|max:50',
+            'referral_source' => 'nullable|string|max:100',
         ]);
 
         $this->memberService->createMember($request->all());
@@ -118,6 +129,13 @@ class MemberController extends Controller
 
     public function update(Request $request, Member $member)
     {
+         
+
+    // $request->merge([
+    //     'medical_conditions' => array_filter(array_map('trim', explode(',', $request->input('medical_conditions', '')))),
+    //     'fitness_goals' => array_filter(array_map('trim', explode(',', $request->input('fitness_goals', '')))),
+    // ]);
+
         $request->validate([
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
@@ -131,7 +149,14 @@ class MemberController extends Controller
             'membership_end_date' => 'required|date|after:membership_start_date',
             'emergency_contact_name' => 'nullable|string|max:100',
             'emergency_contact_phone' => 'nullable|string|max:20',
-            'status' => 'required|in:active,inactive,suspended,expired'
+            'status' => 'required|in:active,inactive,suspended,expired',
+            'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            // 'medical_conditions' => 'nullable|array',
+            // 'medical_conditions.*' => 'string|max:255',
+            // 'fitness_goals' => 'nullable|array',
+            // 'fitness_goals.*' => 'string|max:255',
+            'preferred_workout_time' => 'nullable|string|max:50',
+            'referral_source' => 'nullable|string|max:100',
         ]);
 
         $this->memberService->updateMember($member, $request->all());
@@ -144,10 +169,12 @@ class MemberController extends Controller
     {
         $this->memberService->deleteMember($member);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Member deleted successfully.'
-        ]);
+        return redirect()->route('members.index')
+            ->with('success', 'Member deleted successfully.');
+        // return response()->json([
+        //     'success' => true,
+        //     'message' => 'Member deleted successfully.'
+        // ]);
     }
 
     public function show(Member $member)

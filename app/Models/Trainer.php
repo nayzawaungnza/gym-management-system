@@ -24,14 +24,18 @@ class Trainer extends Model
 'hourly_rate',
 'bio',
 'profile_photo',
-'is_active'
+'is_active',
+
     ];
 
+    
     protected $casts = [
         'hire_date' => 'date',
         'is_active' => 'boolean',
         'certifications' => 'array', // Assuming certifications is stored as a JSON array
     ];
+
+    
 
     public function classes(): HasMany
     {

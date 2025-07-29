@@ -3,6 +3,7 @@ namespace App\Repositories\Backend;
 
 use App\Models\Member;
 use App\Repositories\BaseRepository;
+use Storage;
 
 class MemberRepository extends BaseRepository
 {
@@ -26,6 +27,14 @@ class MemberRepository extends BaseRepository
 
     public function create(array $data)
     {
+        $path = "members";
+        if (isset($data['profile_photo'])) {
+            
+            $data['profile_photo'] = $this->uploadFile($data['profile_photo'], $path);
+        } else {
+            $data['profile_photo'] = null;
+        }
+        
         $member = Member::create([
             'user_id' => $data['user_id'] ?? null,
             'membership_type_id' => $data['membership_type_id'],
@@ -44,8 +53,13 @@ class MemberRepository extends BaseRepository
             'membership_end_date' => $data['membership_end_date'],
             'status' => $data['status'],
             'profile_photo' => $data['profile_photo'] ?? null,
-            'medical_conditions' => $data['medical_conditions'] ?? null,
-            'fitness_goals' => $data['fitness_goals'] ?? null,
+            'medical_conditions' => isset($data['medical_conditions']) 
+                                    ? array_map('trim', explode(',', $data['medical_conditions'])) 
+                                    : null,
+
+            'fitness_goals' => isset($data['fitness_goals']) 
+                                    ? array_map('trim', explode(',', $data['fitness_goals'])) 
+                                    : null,
             'preferred_workout_time' => $data['preferred_workout_time'] ?? null,
             'referral_source' => $data['referral_source'] ?? null,
             'is_active' => $data['status'] === 'active',
@@ -61,6 +75,15 @@ class MemberRepository extends BaseRepository
 
     public function update(Member $member, array $data)
     {
+        if (isset($data['profile_photo'])) {
+            if ($member->profile_photo) {
+                $this->deleteFile($member->profile_photo);
+            }
+            $data['profile_photo'] = $this->uploadFile($data['profile_photo'], 'members');
+        } else {
+            $data['profile_photo'] = $member->profile_photo;
+        }
+        
         $member->update([
             'user_id' => $data['user_id'] ?? $member->user_id,
             'membership_type_id' => $data['membership_type_id'] ?? $member->membership_type_id,
@@ -77,8 +100,12 @@ class MemberRepository extends BaseRepository
             'membership_end_date' => $data['membership_end_date'] ?? $member->membership_end_date,
             'status' => $data['status'] ?? $member->status,
             'profile_photo' => $data['profile_photo'] ?? $member->profile_photo,
-            'medical_conditions' => $data['medical_conditions'] ?? $member->medical_conditions,
-            'fitness_goals' => $data['fitness_goals'] ?? $member->fitness_goals,
+            'medical_conditions' => isset($data['medical_conditions']) 
+                                    ? array_map('trim', explode(',', $data['medical_conditions'])) 
+                                    : $member->medical_conditions,
+            'fitness_goals' => isset($data['fitness_goals']) 
+                                    ? array_map('trim', explode(',', $data['fitness_goals'])) 
+                                    : $member->fitness_goals,
             'preferred_workout_time' => $data['preferred_workout_time'] ?? $member->preferred_workout_time,
             'referral_source' => $data['referral_source'] ?? $member->referral_source,
             'is_active' => ($data['status'] ?? $member->status) === 'active',
@@ -111,6 +138,25 @@ class MemberRepository extends BaseRepository
                 'registration_date' => now(),
                 'status' => 'Registered'
             ]);
+        }
+        return false;
+    }
+    private function uploadFile($file, $path)
+    {
+        if ($file && $file->isValid()) {
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file_name = Storage::disk('public')->putFileAs($path, $file, $filename);
+            if ($file_name) {
+                return $file_name;
+            }
+            
+        }
+        return null;
+    }
+    private function deleteFile($filePath)
+    {
+        if ($filePath && Storage::disk('public')->exists($filePath)) {
+            return Storage::disk('public')->delete($filePath);
         }
         return false;
     }

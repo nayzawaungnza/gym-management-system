@@ -49,6 +49,13 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('verification.send');
 
+        Route::post('/email/verify-code', [App\Http\Controllers\Auth\AuthController::class, 'verifyEmailWithCode'])
+    ->middleware('throttle:6,1')
+    ->name('verification.verify.code');
+Route::post('/email/resend-code', [App\Http\Controllers\Auth\AuthController::class, 'resendVerificationCode'])
+    ->middleware('throttle:6,1')
+    ->name('verification.resend.code');
+});
     /*
     |--------------------------------------------------------------------------
     | Member Frontend Routes
@@ -237,5 +244,4 @@ Route::middleware(['auth', 'check_user_active'])->group(function () {
         //     Route::post('qr-verify', [App\Http\Controllers\Backend\Member\MemberDashboardController::class, 'verifyQR'])->name('qr-verify');
          });
     });
-});
 ?>
