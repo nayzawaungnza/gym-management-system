@@ -17,12 +17,17 @@ class RolePermissionSeeder extends Seeder
         $permissions = [
             // Member permissions
             'member-list', 'member-create', 'member-edit', 'member-delete', 'member-export',
+            //Membership Types permission
+            'membershiptype-list', 'membershiptype-create', 'membershiptype-edit','membershiptype-delete', 
             // Trainer permissions
+            
             'trainer-list', 'trainer-create', 'trainer-edit', 'trainer-delete',
             // Class permissions
             'class-list', 'class-create', 'class-edit', 'class-delete',
             // Payment permissions
             'payment-list', 'payment-create', 'payment-edit', 'payment-delete',
+            //Payment Method permissions
+            'paymentmethod-list', 'paymentmethod-create', 'paymentmethod-edit', 'paymentmethod-delete',
             // Equipment permissions
             'equipment-list', 'equipment-create', 'equipment-edit', 'equipment-delete',
             // Attendance permissions
