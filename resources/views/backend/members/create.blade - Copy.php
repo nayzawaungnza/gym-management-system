@@ -55,7 +55,7 @@
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label for="date_of_birth" class="form-label">Date of Birth </label>
+                                    <label for="date_of_birth" class="form-label">Date of Birth *</label>
                                     <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" 
                                            id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth') }}">
                                     @error('date_of_birth')
@@ -117,7 +117,7 @@
                                 <div class="mb-3">
                                     <label for="membership_end_date" class="form-label">Membership End Date *</label>
                                     <input type="date" class="form-control @error('membership_end_date') is-invalid @enderror" 
-                                           id="membership_end_date" name="membership_end_date" value="{{ old('membership_end_date', date('Y-m-d', strtotime('+1 year'))) }}" required>
+                                           id="membership_end_date" name="membership_end_date" value="{{ old('membership_end_date') }}" required>
                                     @error('membership_end_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

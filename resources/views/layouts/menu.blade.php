@@ -23,10 +23,10 @@
 </li>
 
 <!-- Classes -->
-<li class="menu-item {{ $activePage == 'classes' ? 'active' : '' }}">
-    <a href="{{ route('classes.index') }}" class="menu-link">
+<li class="menu-item {{ $activePage == 'gymclasses' ? 'active' : '' }}">
+    <a href="{{ route('gymclasses.index') }}" class="menu-link">
         <i class="menu-icon tf-icons ti ti-calendar-event"></i>
-        <div data-i18n="Classes">Classes</div>
+        <div data-i18n="GYM Classes">GYM Classes</div>
     </a>
 </li>
 <!-- Membership Types -->
@@ -41,7 +41,7 @@
 <li class="menu-item {{ $activePage == 'payments' ? 'active' : '' }}">
     <a href="{{ route('payments.index') }}" class="menu-link">
         <i class="menu-icon tf-icons ti ti-credit-card"></i>
-        <div data-i18n="Payments">Payments Transaction</div>
+        <div data-i18n="Payments">Payment Transactions</div>
     </a>
 </li>
 <li class="menu-item {{ $activePage == 'paymentmethods' ? 'active' : '' }}">

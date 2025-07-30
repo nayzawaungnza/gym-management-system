@@ -522,12 +522,21 @@ class MemberController extends Controller
         }
 
         // Check if user already has an active subscription for this membership type
-        $activeSubscription = $member->subscriptions()
-            ->where('membership_type_id', $membershipType->id)
-            ->where('status', 'active')
-            ->where('end_date', '>=', now())
-            ->first();
+        // $activeSubscription = $member->subscriptions()
+        //     ->where('membership_type_id', $membershipType->id)
+        //     ->where('status', 'active')
+        //     ->where('end_date', '>=', now())
+        //     ->first();
+           $activeSubscription = MemberSubscription::where('member_id', $member->id)
+    ->where('membership_type_id', $membershipType->id)
+    ->active()  // Using the scope
+    ->first();
 
+            Log::info('Checking for active subscription', [
+                'member_id' => $member->id,
+                'membership_type_id' => $membershipType->id,
+                'active_subscription' => $activeSubscription
+            ]);
         if ($activeSubscription) {
             return response()->json([
                 'success' => false,

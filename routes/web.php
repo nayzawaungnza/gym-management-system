@@ -125,10 +125,18 @@ Route::post('/email/resend-code', [App\Http\Controllers\Auth\AuthController::cla
         Route::get('/exports/analytics', [App\Http\Controllers\Backend\Admin\AdminDashboardController::class, 'exportAnalytics'])->name('admin.exports.analytics');
 
         // Members Management
-        Route::resource('members', App\Http\Controllers\Backend\MemberController::class);
-        Route::post('members/{member}/change-status', [App\Http\Controllers\Backend\MemberController::class, 'changeStatus'])->name('members.change-status');
-        Route::post('members/calculate-end-date', [App\Http\Controllers\Backend\MemberController::class, 'calculateEndDate'])->name('members.calculate-end-date');
-         
+        // Route::resource('members', App\Http\Controllers\Backend\MemberController::class);
+        // Route::post('members/{member}/change-status', [App\Http\Controllers\Backend\MemberController::class, 'changeStatus'])->name('members.change-status');
+        // Route::post('members/calculate-end-date', [App\Http\Controllers\Backend\MemberController::class, 'calculateEndDate'])->name('members.calculate-end-date');
+
+        Route::resource('members', App\Http\Controllers\Backend\MemberController::class)->name(
+            'index', 'members.index'
+        )->name('create', 'members.create'
+        )->name('edit', 'members.edit'
+        )->name('show', 'members.show'
+        )->name('destroy', 'members.destroy'
+        )->name('update', 'members.update'
+        )->name('store', 'members.store');
         // Trainers Management
         Route::resource('trainers', App\Http\Controllers\Backend\TrainerController::class);
         Route::post('trainers/{trainer}/change-status', [App\Http\Controllers\Backend\TrainerController::class, 'changeStatus'])->name('trainers.change-status');
@@ -142,6 +150,8 @@ Route::post('/email/resend-code', [App\Http\Controllers\Auth\AuthController::cla
         Route::resource('classes', App\Http\Controllers\Backend\ClassController::class);
         Route::post('classes/{class}/cancel', [App\Http\Controllers\Backend\ClassController::class, 'cancel'])->name('classes.cancel');
         
+        Route::resource('gymclasses', App\Http\Controllers\Backend\GymClassController::class);
+    Route::post('gymclasses/{gymclass}/change-status', [App\Http\Controllers\Backend\GymClassController::class, 'changeStatus'])->name('gymclasses.change-status');
         // Payments Management
         Route::resource('payments', App\Http\Controllers\Backend\PaymentController::class);
         Route::get('payments/{payment}/receipt', [App\Http\Controllers\Backend\PaymentController::class, 'receipt'])->name('payments.receipt');

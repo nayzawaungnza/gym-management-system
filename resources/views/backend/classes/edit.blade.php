@@ -16,6 +16,16 @@
                     <form action="{{ route('classes.update', $class->id) }}" method="POST">
                         @csrf
                         @method('PUT')
+                        @if($errors->any())
+                            <div class="alert alert-danger">
+                                <ul>
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                            
+                        @endif
                         <div class="row">
                             <div class="mb-3 col-md-6">
                                 <label for="class_name" class="form-label">Class Name *</label>
@@ -118,13 +128,14 @@
                             </div>
                             
                             <div class="mb-3 col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" 
-                                           {{ old('is_active', $class->is_active) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_active">
-                                        Active Status
-                                    </label>
-                                </div>
+                                <label for="is_active" class="form-label">Status</label>
+                                <select class="form-select @error('is_active') is-invalid @enderror" id="is_active" name="is_active">
+                                    <option value="1" {{ old('is_active', $class->is_active) == 1 ? 'selected' : '' }}>Active</option>
+                                    <option value="0" {{ old('is_active', $class->is_active) == 0 ? 'selected' : '' }}>Inactive</option>
+                                </select>
+                                @error('is_active')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         

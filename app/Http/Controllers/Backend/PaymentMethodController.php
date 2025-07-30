@@ -18,11 +18,11 @@ class PaymentMethodController extends Controller
 
     public function __construct(PaymentMethodService $paymentMethodService)
     {
-        $this->middleware('permission:payment-list', ['only' => ['index', 'show']]);
-        $this->middleware('permission:payment-create', ['only' => ['create', 'store']]);
-        $this->middleware('permission:payment-edit', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:payment-delete', ['only' => ['destroy']]);
-        
+        $this->middleware('permission:paymentmethod-list', ['only' => ['index', 'show']]);
+        $this->middleware('permission:paymentmethod-create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:paymentmethod-edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:paymentmethod-delete', ['only' => ['destroy']]);
+
         $this->paymentMethodService = $paymentMethodService;
     }
 

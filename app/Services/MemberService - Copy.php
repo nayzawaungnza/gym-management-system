@@ -6,7 +6,6 @@ use App\Models\Member;
 use App\Repositories\Backend\MemberRepository;
 use App\Services\Interfaces\MemberServiceInterface;
 use Exception;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
@@ -20,12 +19,12 @@ class MemberService implements MemberServiceInterface
         $this->memberRepository = $memberRepository;
     }
 
-    public function getMember(Member $member): Member
+    public function getMember(Member $member)
     {
         return $this->memberRepository->getMember($member);
     }
 
-    public function getMembersEloquent(): Builder
+    public function getMembersEloquent()
     {
         return $this->memberRepository->getMembersEloquent()
             ->with(['membershipType'])
@@ -39,23 +38,17 @@ class MemberService implements MemberServiceInterface
      * @return Member
      * @throws InvalidArgumentException
      */
-    public function createMember(array $data): Member
+    public function createMember(array $data)
     {
         DB::beginTransaction();
         try {
-            // Ensure join_date is set if not provided by the form
-            if (!isset($data['join_date'])) {
-                $data['join_date'] = now();
-            }
-            // Generate member_id if not provided by the form
-            if (!isset($data['member_id'])) {
-                $data['member_id'] = $this->generateMemberId();
-            }
+            $data['join_date'] = now();
+            $data['member_id'] = $this->generateMemberId();
             $member = $this->memberRepository->create($data);
         } catch (Exception $exc) {
             DB::rollBack();
             Log::error('Member Creation Error: ' . $exc->getMessage());
-            throw new InvalidArgumentException('Unable to create Member: ' . $exc->getMessage());
+            throw new InvalidArgumentException('Unable to create Member');
         }
         DB::commit();
 
@@ -70,7 +63,7 @@ class MemberService implements MemberServiceInterface
      * @return bool
      * @throws InvalidArgumentException
      */
-    public function updateMember(Member $member, array $data): bool
+    public function updateMember(Member $member, array $data)
     {
         DB::beginTransaction();
         try {
@@ -78,11 +71,11 @@ class MemberService implements MemberServiceInterface
         } catch (Exception $exc) {
             DB::rollBack();
             Log::error('Member Update Error: ' . $exc->getMessage());
-            throw new InvalidArgumentException('Unable to update Member: ' . $exc->getMessage());
+            throw new InvalidArgumentException('Unable to update Member');
         }
         DB::commit();
 
-        return (bool) $result;
+        return $result;
     }
 
     /**
@@ -92,7 +85,7 @@ class MemberService implements MemberServiceInterface
      * @return bool
      * @throws InvalidArgumentException
      */
-    public function deleteMember(Member $member): bool
+    public function deleteMember(Member $member)
     {
         DB::beginTransaction();
         try {
@@ -100,11 +93,11 @@ class MemberService implements MemberServiceInterface
         } catch (Exception $exc) {
             DB::rollBack();
             Log::error('Member Deletion Error: ' . $exc->getMessage());
-            throw new InvalidArgumentException('Unable to delete Member: ' . $exc->getMessage());
+            throw new InvalidArgumentException('Unable to delete Member');
         }
         DB::commit();
 
-        return (bool) $result;
+        return $result;
     }
 
     public function registerMemberToClass($memberId, $classId)
@@ -115,13 +108,13 @@ class MemberService implements MemberServiceInterface
         } catch (Exception $exc) {
             DB::rollBack();
             Log::error('Member registration Error: ' . $exc->getMessage());
-            throw new InvalidArgumentException('Unable to register Member: ' . $exc->getMessage());
+            throw new InvalidArgumentException('Unable to register Member');
         }
         DB::commit();
         return $result;
     }
 
-    protected function generateMemberId(): string
+    protected function generateMemberId()
     {
         return 'MEM' . date('Ymd') . strtoupper(substr(uniqid(), -5));
     }

@@ -3,7 +3,7 @@ namespace App\Repositories\Backend;
 
 use App\Models\Member;
 use App\Repositories\BaseRepository;
-use Illuminate\Support\Facades\Storage;
+use Storage;
 
 class MemberRepository extends BaseRepository
 {
@@ -80,11 +80,6 @@ class MemberRepository extends BaseRepository
                 $this->deleteFile($member->profile_photo);
             }
             $data['profile_photo'] = $this->uploadFile($data['profile_photo'], 'members');
-        } elseif (isset($data['remove_profile_photo']) && $data['remove_profile_photo']) {
-            if ($member->profile_photo) {
-                $this->deleteFile($member->profile_photo);
-            }
-            $data['profile_photo'] = null;
         } else {
             $data['profile_photo'] = $member->profile_photo;
         }
@@ -129,11 +124,8 @@ class MemberRepository extends BaseRepository
         $activity_data['subject'] = $member;
         $activity_data['event'] = config('constants.ACTIVITY_LOG.DELETED_EVENT_NAME');
         $activity_data['description'] = sprintf('Member (%s) was deleted by %s.', $member->full_name, auth()->user()->name);
-        $this->logActivity($activity);
+        $this->logActivity($activity_data);
 
-        if ($member->profile_photo) {
-            $this->deleteFile($member->profile_photo);
-        }
         return $member->delete();
     }
 

@@ -31,6 +31,7 @@ class MemberSubscription extends Model
         'renewal_date' => 'date',
         'amount_paid' => 'decimal:2',
         'auto_renew' => 'boolean',
+        //'status' => 'enum:active,expired,cancelled,suspended',
     ];
 
     public function member()
@@ -79,5 +80,27 @@ class MemberSubscription extends Model
     public function isExpiringSoon()
     {
         return $this->end_date->isBetween(now(), now()->addDays(7));
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active')
+                    ->where('end_date', '>=', now());
+    }
+
+    public function scopeExpired($query)
+    {
+        return $query->where('status', 'expired')
+                ->where('end_date', '<', now());
+    }
+
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', 'cancelled');
+    }
+
+    public function scopeSuspended($query)
+    {
+        return $query->where('status', 'suspended');
     }
 }

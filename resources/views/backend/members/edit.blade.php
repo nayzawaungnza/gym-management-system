@@ -58,7 +58,7 @@
                                 <div class="mb-3">
                                     <label for="date_of_birth" class="form-label">Date of Birth </label>
                                     <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" 
-                                           id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth', $member->date_of_birth->format('Y-m-d')) }}" >
+                                           id="date_of_birth" name="date_of_birth" value="{{ old('date_of_birth', $member->date_of_birth ? $member->date_of_birth->format('Y-m-d') : '') }}" >
                                     @error('date_of_birth')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -109,7 +109,7 @@
                                 <div class="mb-3">
                                     <label for="membership_start_date" class="form-label">Membership Start Date *</label>
                                     <input type="date" class="form-control @error('membership_start_date') is-invalid @enderror" 
-                                           id="membership_start_date" name="membership_start_date" value="{{ old('membership_start_date', $member->membership_start_date->format('Y-m-d')) }}" required>
+                                           id="membership_start_date" name="membership_start_date" value="{{ old('membership_start_date', $member->membership_start_date ? $member->membership_start_date->format('Y-m-d') : '') }}" required>
                                     @error('membership_start_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -118,7 +118,7 @@
                                 <div class="mb-3">
                                     <label for="membership_end_date" class="form-label">Membership End Date *</label>
                                     <input type="date" class="form-control @error('membership_end_date') is-invalid @enderror" 
-                                           id="membership_end_date" name="membership_end_date" value="{{ old('membership_end_date', $member->membership_end_date->format('Y-m-d')) }}" required>
+                                           id="membership_end_date" name="membership_end_date" value="{{ old('membership_end_date', $member->membership_end_date ? $member->membership_end_date->format('Y-m-d') : '') }}" required>
                                     @error('membership_end_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -149,7 +149,7 @@
                                         <div class="mt-2">
                                             <img src="{{ asset('storage/'.$member->profile_photo) }}" width="100" class="img-thumbnail">
                                             <div class="form-check mt-2">
-                                                <input class="form-check-input" type="checkbox" id="remove_profile_photo" name="remove_profile_photo">
+                                                <input class="form-check-input" type="checkbox" id="remove_profile_photo" name="remove_profile_photo" value="1">
                                                 <label class="form-check-label" for="remove_profile_photo">Remove current photo</label>
                                             </div>
                                         </div>
@@ -184,7 +184,7 @@
                                                 class="form-control @error('medical_conditions') is-invalid @enderror" 
                                                 id="medical_conditions" 
                                                 name="medical_conditions" 
-                                                value="{{ old('medical_conditions', $member->medical_conditions ? implode(', ', $member->medical_conditions) : '') }}" 
+                                                value="{{ old('medical_conditions', is_array($member->medical_conditions) ? implode(', ', $member->medical_conditions) : $member->medical_conditions) }}" 
                                                 placeholder="e.g., Asthma, High blood pressure">
 
                                         @error('medical_conditions')
@@ -198,7 +198,7 @@
                                                 class="form-control @error('fitness_goals') is-invalid @enderror" 
                                                 id="fitness_goals" 
                                                 name="fitness_goals" 
-                                                value="{{ old('fitness_goals', $member->fitness_goals ? implode(', ', $member->fitness_goals) : '') }}" 
+                                                value="{{ old('fitness_goals', is_array($member->fitness_goals) ? implode(', ', $member->fitness_goals) : $member->fitness_goals) }}" 
                                                 placeholder="e.g., Weight loss, Muscle gain">
                                         @error('fitness_goals')
                                         <div class="invalid-feedback">{{ $message }}</div>

@@ -41,8 +41,8 @@
             </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="classes-grid">
-            @if(isset($classes) && $classes->count() > 0)
-                @foreach($classes as $class)
+            @if(isset($gymClasses) && $gymClasses->count() > 0)
+                @foreach($gymClasses as $class)
                     <div class="class-card bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1" data-category="{{ strtolower($class->class_type) }}">
                         <!-- Class Image -->
                         <div class="relative h-48 bg-gradient-to-br from-blue-500 to-purple-600">
@@ -114,21 +114,18 @@
                                     @endphp
                                     
                                     @if($isEnrolled)
-                                        <button type="button" class="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium cursor-not-allowed" disabled>
+                                        <button class="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium cursor-not-allowed" disabled>
                                             <i data-lucide="check-circle" class="h-4 w-4 inline mr-2"></i>
                                             Enrolled
                                         </button>
                                     @elseif($class->isFull())
-                                        <button type="button" class="w-full bg-gray-100 text-gray-500 py-3 px-4 rounded-lg font-medium cursor-not-allowed" disabled>
+                                        <button class="w-full bg-gray-100 text-gray-500 py-3 px-4 rounded-lg font-medium cursor-not-allowed" disabled>
                                             <i data-lucide="x-circle" class="h-4 w-4 inline mr-2"></i>
                                             Class Full
                                         </button>
                                     @else
-                                        <button type="button" 
-                                                data-class-id="{{ $class->id }}" 
-                                                data-class-name="{{ $class->class_name }}" 
-                                                data-class-price="{{ $class->price }}"
-                                                class="enroll-now-btn w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
+                                        <button onclick="showEnrollModal('{{ $class->id }}', '{{ $class->class_name }}', {{ $class->price }})" 
+                                                class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
                                             <i data-lucide="plus-circle" class="h-4 w-4 inline mr-2"></i>
                                             Enroll Now
                                         </button>
@@ -245,11 +242,6 @@
                     ];
                 @endphp
 
-                <div class="col-span-full text-center py-8">
-                    <p class="text-gray-600 text-lg mb-4">No classes found in the database. Displaying example classes.</p>
-                    <p class="text-sm text-gray-500">These example classes cannot be enrolled in directly. Please add classes via the admin panel.</p>
-                </div>
-
                 @foreach($defaultClasses as $class)
                     <div class="class-card bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1" data-category="{{ $class['category'] }}">
                         <!-- Class Image -->
@@ -311,11 +303,26 @@
                                 </div>
                             </div>
 
-                            <!-- Enrollment Button (Disabled for default classes) -->
-                            <button type="button" class="w-full bg-gray-100 text-gray-500 py-3 px-4 rounded-lg font-medium cursor-not-allowed" disabled>
-                                <i data-lucide="info" class="h-4 w-4 inline mr-2"></i>
-                                Example Class
-                            </button>
+                            <!-- Enrollment Button -->
+                            @auth
+                                @if($class['current'] >= $class['max'])
+                                    <button class="w-full bg-gray-100 text-gray-500 py-3 px-4 rounded-lg font-medium cursor-not-allowed" disabled>
+                                        <i data-lucide="x-circle" class="h-4 w-4 inline mr-2"></i>
+                                        Class Full
+                                    </button>
+                                @else
+                                    <button onclick="showEnrollModal('{{ $class['name'] }}', {{ $class['price'] }})" 
+                                            class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
+                                        <i data-lucide="plus-circle" class="h-4 w-4 inline mr-2"></i>
+                                        Enroll Now
+                                    </button>
+                                @endif
+                            @else
+                                <a href="{{ route('login') }}" class="block w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium text-center hover:bg-blue-700 transition-colors duration-200">
+                                    <i data-lucide="log-in" class="h-4 w-4 inline mr-2"></i>
+                                    Login to Enroll
+                                </a>
+                            @endauth
                         </div>
                     </div>
                 @endforeach
@@ -333,7 +340,7 @@
                 <div class="p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Enroll in Class</h3>
-                        <button type="button" class="close-modal-btn text-gray-400 hover:text-gray-600">
+                        <button onclick="closeEnrollModal()" class="text-gray-400 hover:text-gray-600">
                             <i data-lucide="x" class="h-6 w-6"></i>
                         </button>
                     </div>
@@ -369,10 +376,10 @@
                     </div>
 
                     <div class="flex space-x-3">
-                        <button type="button" class="close-modal-btn flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <button onclick="closeEnrollModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                             Cancel
                         </button>
-                        <button type="button" id="confirmEnrollmentBtn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <button onclick="confirmEnrollment()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                             Confirm Enrollment
                         </button>
                     </div>
@@ -381,21 +388,23 @@
         </div>
     </div>
 </section>
-@push('scripts')
+
 <script>
 let currentClassId = null;
-let originalBodyOverflow1 = '';
+let originalBodyOverflow = '';
 
 function showEnrollModal(classId, className, price) {
     currentClassId = classId;
     document.getElementById('modalClassName').textContent = className;
     document.getElementById('modalClassPrice').textContent = price > 0 ? '$' + price : 'Free';
 
-    originalBodyOverflow1 = document.body.style.overflow;
+    // Store original body overflow value and disable scrolling
+    originalBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     document.getElementById('enrollModal').classList.remove('hidden');
     
+    // Clear any previously selected payment method
     document.querySelectorAll('input[name="payment_method"]').forEach(input => {
         input.checked = false;
     });
@@ -403,84 +412,63 @@ function showEnrollModal(classId, className, price) {
 
 function closeEnrollModal() {
     document.getElementById('enrollModal').classList.add('hidden');
-    document.body.style.overflow = originalBodyOverflow1;
+    document.body.style.overflow = originalBodyOverflow;
     currentClassId = null;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Attach event listeners to "Enroll Now" buttons for actual classes
-    document.querySelectorAll('.enroll-now-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const classId = this.dataset.classId;
-            const className = this.dataset.className;
-            const classPrice = parseFloat(this.dataset.classPrice);
-            showEnrollModal(classId, className, classPrice);
-        });
-    });
-
-    // Attach event listeners to close modal buttons
-    document.querySelectorAll('.close-modal-btn').forEach(button => {
-        button.addEventListener('click', closeEnrollModal);
-    });
-
-    // Close modal when clicking outside
-    document.getElementById('enrollModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeEnrollModal();
-        }
-    });
-
-    // Confirm Enrollment button click handler
-    document.getElementById('confirmEnrollmentBtn').addEventListener('click', function() {
-        const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked');
-        
-        if (!selectedPaymentMethod) {
-            alert('Please select a payment method.');
-            return;
-        }
-
-        const paymentMethodId = selectedPaymentMethod.value;
-
-        fetch('/classes/' + currentClassId + '/enroll', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                payment_method_id: paymentMethodId
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw err; });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert(data.error || 'Enrollment failed');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert(error.error || 'Enrollment failed. Please try again.');
-        })
-        .finally(() => {
-            closeEnrollModal();
-        });
-    });
-
-    // Initialize Lucide icons
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
+function confirmEnrollment() {
+    const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked');
+    
+    if (!selectedPaymentMethod) {
+        alert('Please select a payment method.');
+        return;
     }
 
-    // Filter form logic
+    const paymentMethodId = selectedPaymentMethod.value;
+
+    fetch('/classes/' + currentClassId + '/enroll', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            payment_method_id: paymentMethodId
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.error || 'Enrollment failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.error || 'Enrollment failed. Please try again.');
+    })
+    .finally(() => {
+        closeEnrollModal();
+    });
+}
+
+// Close modal when clicking outside
+document.getElementById('enrollModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEnrollModal();
+    }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('class-filters');
     const classCards = document.querySelectorAll('.class-card');
     
@@ -490,6 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
             filterClasses();
         });
         
+        // Also trigger filtering when select values change if you want
         filterForm.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', filterClasses);
         });
@@ -501,9 +490,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         classCards.forEach(card => {
             const cardType = card.getAttribute('data-category');
-            // For default classes, difficulty is in the span, for actual classes it's in the model
-            const cardDifficultyElement = card.querySelector('.absolute.top-4.left-4 span');
-            const cardDifficulty = cardDifficultyElement ? cardDifficultyElement.textContent.toLowerCase() : '';
+            const cardDifficulty = card.querySelector('[class*="bg-"]').textContent.toLowerCase();
             
             const typeMatch = !typeFilter || cardType.includes(typeFilter);
             const difficultyMatch = !difficultyFilter || cardDifficulty.includes(difficultyFilter);
@@ -516,6 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Initialize filters from URL params if needed
     const urlParams = new URLSearchParams(window.location.search);
     const typeParam = urlParams.get('type');
     const difficultyParam = urlParams.get('difficulty');
@@ -527,9 +515,9 @@ document.addEventListener('DOMContentLoaded', function() {
         filterForm.querySelector('[name="difficulty"]').value = difficultyParam;
     }
     
+    // Apply filters on initial load if params exist
     if (typeParam || difficultyParam) {
         filterClasses();
     }
 });
 </script>
-@endpush

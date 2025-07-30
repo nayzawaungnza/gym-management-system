@@ -33,11 +33,13 @@ class GymClass extends Model
     ];
 
     protected $casts = [
-        'schedule_day' => 'datetime',
+        //'schedule_day' => 'datetime',
         'duration_minutes' => 'integer',
         'max_capacity' => 'integer',
         'current_capacity' => 'integer',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
     ];
 
     public function trainer(): BelongsTo

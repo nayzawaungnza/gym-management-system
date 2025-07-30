@@ -17,11 +17,11 @@ class MembershipTypeController extends Controller
 
     public function __construct(MembershipTypeService $membershipTypeService)
     {
-        $this->middleware('permission:member-list', ['only' => ['index', 'show']]);
-        $this->middleware('permission:member-create', ['only' => ['create', 'store']]);
-        $this->middleware('permission:member-edit', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:member-delete', ['only' => ['destroy']]);
-        
+        $this->middleware('permission:membershiptype-list', ['only' => ['index', 'show']]);
+        $this->middleware('permission:membershiptype-create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:membershiptype-edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:membershiptype-delete', ['only' => ['destroy']]);
+
         $this->membershipTypeService = $membershipTypeService;
     }
 
@@ -52,7 +52,7 @@ class MembershipTypeController extends Controller
                                     <i class="fas fa-eye"></i>
                                     <div class="ripple-container"></div>
                                 </a></div>';
-                        if (auth()->user()->can('member-delete')) {
+                        if (auth()->user()->can('membershiptype-delete')) {
                             $btn .= '<div class="my-1 text-center"><form action="' . route('membershiptypes.destroy', $membershipType->id) . '" method="POST" id="del-membershiptype-' . $membershipType->id . '" class="d-inline">
                                         <input type="hidden" name="_token" value="' . csrf_token() . '">
                                         <input type="hidden" name="_method" value="DELETE">

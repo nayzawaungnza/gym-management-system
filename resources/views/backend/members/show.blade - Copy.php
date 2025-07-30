@@ -52,7 +52,7 @@
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Membership Type</label>
-                                    <p class="form-control-static badge bg-success">{{ $member->membershipType->type_name ?? 'N/A' }}</p>
+                                    <p class="form-control-static">{{ $member->membershipType->name ?? 'N/A' }}</p>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Membership Period</label>
@@ -135,7 +135,7 @@
                                         <label class="form-label">Last Payment</label>
                                         <p class="form-control-static">
                                             @if($member->payments->count() > 0)
-                                                ${{ number_format($member->payments->last()->amount, 2) }} on {{ $member->payments->last()->payment_date->format('M d, Y') }}
+                                                {{ $member->payments->last()->amount }} on {{ $member->payments->last()->payment_date->format('M d, Y') }}
                                             @else
                                                 No payments recorded
                                             @endif
@@ -156,7 +156,7 @@
                 </div>
             </div>
 
-            <div class="card mt-4">
+            <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">Class Registrations</h5>
                 </div>
@@ -169,7 +169,6 @@
                                         <th>Class Name</th>
                                         <th>Trainer</th>
                                         <th>Schedule</th>
-                                        <th>Time</th>
                                         <th>Registration Date</th>
                                         <th>Status</th>
                                     </tr>
@@ -179,8 +178,7 @@
                                     <tr>
                                         <td>{{ $registration->gymClass->class_name ?? 'Unknown Class' }}</td>
                                         <td>{{ $registration->gymClass->trainer->full_name ?? 'No Trainer' }}</td>
-                                        <td>{{ ucfirst($registration->gymClass->schedule_day) }}</td>
-                                        <td>{{ $registration->gymClass->start_time->format('H:i') }} - {{ $registration->gymClass->end_time->format('H:i') }}</td>
+                                        <td>{{ $registration->gymClass->schedule_day->format('M d, Y H:i') }}</td>
                                         <td>{{ $registration->registration_date->format('M d, Y') }}</td>
                                         <td>
                                             <span class="badge bg-{{ $registration->status === 'Registered' ? 'info' : ($registration->status === 'Attended' ? 'success' : 'danger') }}">

@@ -113,12 +113,13 @@
                             </div>
                             
                             <div class="mb-3 col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" checked>
-                                    <label class="form-check-label" for="is_active">
-                                        Active Status
-                                    </label>
-                                </div>
+                                <label for="is_active" class="form-label">Status</label>
+                                <select class="form-select @error('is_active') is-invalid @enderror" id="is_active" name="is_active">
+                                    <option value="1" {{ old('is_active', 1) == 1 ? 'selected' : '' }}>Active</option>
+                                    <option value="0" {{ old('is_active', 1) == 0 ? 'selected' : '' }}>Inactive</option>
+                                </select>
+                                @error('is_active')
+                                <div class="invalid-feedback">{{ $message }}</div>
                             </div>
                         </div>
                         

@@ -44,19 +44,25 @@ class MainController extends Controller
 
         $paymentMethods = PaymentMethod::where('is_active', true)->get();
 
+        $member = auth()->user()->member ?? null;
+
+        $registeredClassIds = $member->classRegistrations()
+            ->where('status', 'registered')
+            ->pluck('class_id')
+            ->toArray();
 
         // Get upcoming gym classes
-        $gymClasses = GymClass::with(['trainer'])
+        $classes = GymClass::with(['trainer'])
             ->where('is_active', true)
             ->where('schedule_day', '>=', now())
             ->orderBy('schedule_day')
-            ->limit(6)
             ->get();
 
         // Check if membership types are available for registration
         $membershipTypes = MembershipType::where('is_active', true)->get();
 
-        return view('frontend.main', compact('paymentMethods','stats', 'trainers', 'gymClasses', 'membershipTypes'));
+        //dd($gymClasses, $membershipTypes);
+        return view('frontend.main', compact('paymentMethods','registeredClassIds','stats', 'trainers', 'classes', 'membershipTypes'));
     }
 
     public function enrollInClass(Request $request)

@@ -57,12 +57,14 @@
                                 @enderror
                             </div>
                             <div class="mb-3 col-md-6">
-                                <div class="form-check mt-4 pt-2">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_active">
-                                        Active Status
-                                    </label>
-                                </div>
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select @error('status') is-invalid @enderror" id="status" name="status">
+                                    <option value="1" {{ old('status', 1) == 1 ? 'selected' : '' }}>Active</option>
+                                    <option value="0" {{ old('status', 1) == 0 ? 'selected' : '' }}>Inactive</option>
+                                </select>
+                                @error('status')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         <div class="mt-4">
