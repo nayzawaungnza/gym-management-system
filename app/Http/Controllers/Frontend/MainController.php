@@ -46,10 +46,10 @@ class MainController extends Controller
 
         $member = auth()->user()->member ?? null;
 
-        $registeredClassIds = $member->classRegistrations()
-            ->where('status', 'registered')
-            ->pluck('class_id')
-            ->toArray();
+        // $registeredClassIds = $member->classRegistrations()
+        //     ->where('status', 'registered')
+        //     ->pluck('class_id')
+        //     ->toArray();
 
         // Get upcoming gym classes
         $classes = GymClass::with(['trainer'])
@@ -62,7 +62,7 @@ class MainController extends Controller
         $membershipTypes = MembershipType::where('is_active', true)->get();
 
         //dd($gymClasses, $membershipTypes);
-        return view('frontend.main', compact('paymentMethods','registeredClassIds','stats', 'trainers', 'classes', 'membershipTypes'));
+        return view('frontend.main', compact('paymentMethods','stats', 'trainers', 'classes', 'membershipTypes'));
     }
 
     public function enrollInClass(Request $request)
