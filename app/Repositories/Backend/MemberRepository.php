@@ -126,15 +126,21 @@ class MemberRepository extends BaseRepository
 
     public function destroy(Member $member)
     {
+
+         $deleted = $this->deleteById($member->id);
+
+        if ($deleted) {
+            
+            $member->save();
+        }
+        
         $activity_data['subject'] = $member;
         $activity_data['event'] = config('constants.ACTIVITY_LOG.DELETED_EVENT_NAME');
         $activity_data['description'] = sprintf('Member (%s) was deleted by %s.', $member->full_name, auth()->user()->name);
-        $this->logActivity($activity);
+        $this->logActivity($activity_data);
 
-        if ($member->profile_photo) {
-            $this->deleteFile($member->profile_photo);
-        }
-        return $member->delete();
+        return $member;
+        
     }
 
     public function registerToClass($memberId, $classId)

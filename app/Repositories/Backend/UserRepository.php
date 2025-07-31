@@ -92,7 +92,7 @@ class UserRepository extends BaseRepository
                         'user_id' => $user->id,
                         'trainer_id' => 'TRN-' . uniqid(), // Generate a unique trainer ID
                         'first_name' => $nameParts['first_name'],
-                        'last_name' => $nameParts['last_name'],
+                        'last_name' => $nameParts['last_name'] ?? 'TRN',
                         'email' => $user->email,
                         'phone' => $user->phone,
                         'specialization' => $data['specialization'] ?? 'General Fitness', // Add to form if needed
@@ -116,7 +116,7 @@ class UserRepository extends BaseRepository
                         'membership_type_id' => $defaultMembershipType->id ?? null,
                         'member_id' => 'MEM-' . uniqid(), // Generate a unique member ID
                         'first_name' => $nameParts['first_name'],
-                        'last_name' => $nameParts['last_name'],
+                        'last_name' => $nameParts['last_name'] ?? 'MEM',
                         'email' => $user->email,
                         'phone' => $user->phone,
                         'date_of_birth' => $user->date_of_birth,

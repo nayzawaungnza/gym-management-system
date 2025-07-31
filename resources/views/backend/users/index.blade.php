@@ -98,13 +98,13 @@
                                 <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm btn-warning me-1">
                                     <i class="ti ti-edit"></i>
                                 </a>
-                                <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline">
+                                {{-- <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this user?')">
                                         <i class="ti ti-trash"></i>
                                     </button>
-                                </form>
+                                </form> --}}
                             </td>
                         </tr>
                     @empty

@@ -1,22 +1,23 @@
-//  record delete
-$(document).on("click", ".destroy_btn", function () {
+$(document).on("click", ".destroy_btn", function (e) {
+    e.preventDefault();
+    var form = $(this).closest("form"); // Get the parent form directly
+
     Swal.fire({
         title: "Are you sure?",
-        text: "Once deleted, you will not be able to recover this imaginary file!",
-        icon: 'warning',
+        text: "This record will be permanently deleted!",
+        icon: "warning",
         showCancelButton: true,
-        confirmButtonText: 'Yes, delete it!',
+        confirmButtonText: "Yes, delete it!",
+        cancelButtonText: "Cancel",
         customClass: {
-          confirmButton: 'btn btn-primary me-3',
-          cancelButton: 'btn btn-label-secondary'
+            confirmButton: "btn btn-primary me-3",
+            cancelButton: "btn btn-label-secondary",
         },
-        buttonsStyling: false
-    }).then((willDelete) => {
-        if (willDelete) {
-            var form_id = $(this).attr("data-origin");
-            $("#" + form_id).submit();
-        } else {
-            // swal("Your imaginary file is safe!");
+        buttonsStyling: false,
+        reverseButtons: true, // Optional: swaps button positions
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit(); // Submit the form directly
         }
     });
 });
