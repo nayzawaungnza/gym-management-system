@@ -124,18 +124,22 @@ class TrainerController extends Controller
         $activeClasses = $trainer->classes()->upcoming()->count();
         
         if ($activeClasses > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete trainer with active classes. Please reassign or cancel classes first.'
-            ]);
+            return redirect()->back()->with('error', 'Cannot delete trainer with active classes. Please reassign or cancel classes first.');
+            // return response()->json([
+            //     'success' => false,
+            //     'message' => 'Cannot delete trainer with active classes. Please reassign or cancel classes first.'
+            // ]);
         }
 
         $this->trainerService->deleteTrainer($trainer);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Trainer deleted successfully.'
-        ]);
+        return redirect()->route('trainers.index')
+            ->with('success', 'Trainer deleted successfully.');
+
+        // return response()->json([
+        //     'success' => true,
+        //     'message' => 'Trainer deleted successfully.'
+        // ]);
     }
 
     public function changeStatus(Request $request, Trainer $trainer)
